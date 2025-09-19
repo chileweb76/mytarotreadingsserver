@@ -187,7 +187,11 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }))
 
 // Session configuration (for Passport)
-app.use(session({
+// Session configuration (for Passport)
+// In production/serverless we should avoid the default MemoryStore which
+// is not suitable for production. If `connect-mongo` is available and
+// `MONGODB_URI` is configured, prefer a Mongo-backed session store.
+const sessionOptions = {
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
@@ -195,7 +199,28 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
-}))
+}
+
+let mongoStoreAvailable = false
+if (process.env.MONGODB_URI) {
+  try {
+    // connect-mongo v4 exports a `create` factory
+    const MongoStore = require('connect-mongo')
+    if (MongoStore && typeof MongoStore.create === 'function') {
+      sessionOptions.store = MongoStore.create({ mongoUrl: process.env.MONGODB_URI })
+      mongoStoreAvailable = true
+    }
+  } catch (e) {
+    // connect-mongo not installed or failed - we'll fall back and warn
+    console.warn('connect-mongo not available - using default MemoryStore. Install connect-mongo for production sessions.')
+  }
+}
+
+if (!mongoStoreAvailable && process.env.NODE_ENV === 'production') {
+  console.warn('Warning: connect.session() MemoryStore is not designed for a production environment, as it will leak memory, and will not scale past a single process.')
+}
+
+app.use(session(sessionOptions))
 
 // Initialize Passport
 app.use(passport.initialize())
@@ -404,4 +429,11 @@ if (!isServerless) {
   // Run on start and every 24h
   purgeSoftDeletedAccounts()
   setInterval(purgeSoftDeletedAccounts, purgeIntervalMs)
+}
+
+// When running in serverless (Vercel), export the Express app so the platform
+// can mount it. This prevents the 'No exports found' message when Vercel
+// expects an exported function or app.
+if (isServerless) {
+  module.exports = app
 }
