@@ -22,10 +22,34 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir))
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('✅ Connected to MongoDB Atlas')
+// Helper to detect serverless environment (Vercel, AWS Lambda, etc.)
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FUNCTIONS_WORKER_RUNTIME)
+
+// Cached database connection for serverless reuse
+async function connectToDatabase() {
+  if (!process.env.MONGODB_URI) {
+    throw new Error('MONGODB_URI is not set')
+  }
+
+  if (global._mongoClientPromise) {
+    return global._mongoClientPromise
+  }
+
+  // Use Mongoose connection caching pattern
+  global._mongoClientPromise = mongoose.connect(process.env.MONGODB_URI, {
+    // keep defaults; you can add options here if needed
+  })
+
+  return global._mongoClientPromise
+}
+
+// Run optional seeding only when explicitly enabled
+async function runOptionalSeeding() {
+  if (process.env.RUN_SEEDS !== 'true') return
+
+  console.log('Running optional DB seeding (RUN_SEEDS=true)')
+
+  try {
     // Seed spreads collection from client/public/spreads.json if empty
     try {
       const Spread = require('./models/Spread')
@@ -40,29 +64,22 @@ mongoose.connect(process.env.MONGODB_URI)
           items = []
         }
 
-        ;(async () => {
-          try {
-            const count = await Spread.countDocuments({})
-            if (count === 0 && items.length) {
-              // normalize items to model shape
-              const toInsert = items.map(it => ({
-                spread: it.spread || '',
-                cards: Array.isArray(it.cards) ? it.cards : [],
-                image: it.image || ''
-              }))
-              await Spread.insertMany(toInsert)
-              console.log(`🌱 Seeded ${toInsert.length} spreads into DB`)
-            }
-          } catch (e) {
-            console.error('Error seeding spreads', e)
-          }
-        })()
+        const count = await Spread.countDocuments({})
+        if (count === 0 && items.length) {
+          const toInsert = items.map(it => ({
+            spread: it.spread || '',
+            cards: Array.isArray(it.cards) ? it.cards : [],
+            image: it.image || ''
+          }))
+          await Spread.insertMany(toInsert)
+          console.log(`🌱 Seeded ${toInsert.length} spreads into DB`)
+        }
       }
     } catch (e) {
       console.error('Spreads seeding skipped:', e)
     }
 
-    // Seed decks collection from rider_waite.json if Rider-Waite deck doesn't exist
+    // Deck seeding
     try {
       const Deck = require('./models/Deck')
       const riderWaitePath = path.join(__dirname, '..', 'rider_waite.json')
@@ -76,94 +93,76 @@ mongoose.connect(process.env.MONGODB_URI)
         }
 
         if (deckData) {
-          ;(async () => {
-            try {
-              // Check if Rider-Waite deck already exists
-              const existingDeck = await Deck.findOne({ deckName: 'Rider-Waite Tarot Deck' })
-              if (!existingDeck) {
-                // Create the deck (owner: null means it's available to all users)
-                const riderWaiteDeck = new Deck({
-                  deckName: deckData.deckName,
-                  description: deckData.description,
-                  image: deckData.image, // Include deck cover image
-                  owner: null, // Available to all users
-                  cards: deckData.cards
-                })
-                await riderWaiteDeck.save()
-                console.log(`🌱 Seeded Rider-Waite Tarot Deck with ${deckData.cards.length} cards into DB`)
-              } else {
-                console.log('📚 Rider-Waite Tarot Deck already exists in DB')
-              }
-            } catch (e) {
-              console.error('Error seeding Rider-Waite deck', e)
-            }
-          })()
+          const existingDeck = await Deck.findOne({ deckName: 'Rider-Waite Tarot Deck' })
+          if (!existingDeck) {
+            const riderWaiteDeck = new Deck({
+              deckName: deckData.deckName,
+              description: deckData.description,
+              image: deckData.image,
+              owner: null,
+              cards: deckData.cards
+            })
+            await riderWaiteDeck.save()
+            console.log(`🌱 Seeded Rider-Waite Tarot Deck with ${deckData.cards.length} cards into DB`)
+          } else {
+            console.log('📚 Rider-Waite Tarot Deck already exists in DB')
+          }
         }
       }
     } catch (e) {
       console.error('Deck seeding skipped:', e)
     }
 
-    // Seed a global "Self" querent that all users can reference
+    // Global "Self" querent
     try {
       const Querent = require('./models/Querent')
-      ;(async () => {
-        try {
-          // Check if global "Self" querent already exists
-          const existingSelfQuerent = await Querent.findOne({ name: 'Self', userId: null })
-          if (!existingSelfQuerent) {
-            // Create the global "Self" querent (userId: null means it's available to all users)
-            const selfQuerent = new Querent({
-              name: 'Self',
-              userId: null // Global querent for all users
-            })
-            await selfQuerent.save()
-            console.log(`🌱 Seeded global "Self" querent into DB`)
-          } else {
-            console.log('📚 Global "Self" querent already exists in DB')
-          }
-        } catch (e) {
-          console.error('Error seeding global Self querent', e)
-        }
-      })()
+      const existingSelfQuerent = await Querent.findOne({ name: 'Self', userId: null })
+      if (!existingSelfQuerent) {
+        const selfQuerent = new Querent({ name: 'Self', userId: null })
+        await selfQuerent.save()
+        console.log(`🌱 Seeded global "Self" querent into DB`)
+      }
     } catch (e) {
       console.error('Self querent seeding skipped:', e)
     }
 
-    // Seed global tags for all users
+    // Global tags
     try {
       const Tag = require('./models/Tag')
       const globalTags = [
-        'Career', 'Relationships', 'Finances', 'Romance', 'Health', 
+        'Career', 'Relationships', 'Finances', 'Romance', 'Health',
         'Friends & Family', 'Self-Reflection', 'Energy', 'Decision Making'
       ]
-      
-      ;(async () => {
-        try {
-          for (const tagName of globalTags) {
-            const existingTag = await Tag.findOne({ name: tagName, userId: null, isGlobal: true })
-            if (!existingTag) {
-              const globalTag = new Tag({
-                name: tagName,
-                userId: null, // Global tag for all users
-                isGlobal: true
-              })
-              await globalTag.save()
-            }
-          }
-          console.log(`🌱 Seeded global tags into DB`)
-        } catch (e) {
-          console.error('Error seeding global tags', e)
+      for (const tagName of globalTags) {
+        const existingTag = await Tag.findOne({ name: tagName, userId: null, isGlobal: true })
+        if (!existingTag) {
+          const globalTag = new Tag({ name: tagName, userId: null, isGlobal: true })
+          await globalTag.save()
         }
-      })()
+      }
+      console.log(`🌱 Seeded global tags into DB`)
     } catch (e) {
       console.error('Global tags seeding skipped:', e)
     }
-  })
-  .catch((error) => {
+  } catch (e) {
+    console.error('Error during optional seeding:', e)
+  }
+}
+
+// Initialize DB connection and optional seeding. In serverless environments
+// we avoid exiting the process on failure and skip long-running tasks.
+;(async () => {
+  try {
+    await connectToDatabase()
+    console.log('✅ Connected to MongoDB Atlas')
+    if (!isServerless || process.env.RUN_SEEDS === 'true') {
+      await runOptionalSeeding()
+    }
+  } catch (error) {
     console.error('❌ MongoDB connection error:', error)
-    process.exit(1)
-  })
+    if (!isServerless) process.exit(1)
+  }
+})()
 
 // Middleware
 app.use(cors({
@@ -228,155 +227,158 @@ app.use('*', (req, res) => {
 
 const PORT = Number(process.env.PORT) || 5000
 
-// Smart port selection - try multiple ports if needed
-function startServer(port) {
-  const server = app.listen(port, () => {
-    console.log(`🚀 Server running on http://localhost:${port}`)
-  })
-  
-  server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.log(`Port ${port} is busy, trying ${port + 1}...`)
-      startServer(port + 1)
-    } else {
-      console.error('Server error:', err)
-      process.exit(1)
-    }
-  })
-}
-
-startServer(PORT)
-
-// Scheduled purge for soft-deleted accounts
-const SOFT_DELETE_RETENTION_DAYS = Number(process.env.SOFT_DELETE_RETENTION_DAYS || 30)
-const purgeIntervalMs = 24 * 60 * 60 * 1000 // daily
-
-const purgeSoftDeletedAccounts = async () => {
-  try {
-    const cutoff = new Date(Date.now() - SOFT_DELETE_RETENTION_DAYS * 24 * 60 * 60 * 1000)
-    const User = require('./models/User')
-    const Reading = require('./models/Reading')
-
-    // 1) Notify users whose deletion is coming up within NOTIFY_DAYS_BEFORE_PURGE and not yet notified
-    const NOTIFY_DAYS_BEFORE_PURGE = Number(process.env.NOTIFY_DAYS_BEFORE_PURGE || 7)
-    const now = new Date()
-    const notifyCutoffStart = new Date(now.getTime() - 1000) // now
-    const notifyCutoffEnd = new Date(now.getTime() + NOTIFY_DAYS_BEFORE_PURGE * 24 * 60 * 60 * 1000)
-
-    const notificationTemplate = process.env.COURIER_NOTIFICATION_TEMPLATE_ID || process.env.COURIER_TEMPLATE_ID
-
-    // Initial notifications (e.g., 7 days before purge)
-    const usersToNotify = await User.find({
-      isDeleted: true,
-      deletedAt: { $exists: true, $ne: null },
-      deletionNotified: false,
-      deletedAt: { $lt: notifyCutoffEnd }
+// Only start a persistent server when not running in serverless
+if (!isServerless) {
+  // Smart port selection - try multiple ports if needed
+  function startServer(port) {
+    const server = app.listen(port, () => {
+      console.log(`🚀 Server running on http://localhost:${port}`)
     })
-
-    for (const user of usersToNotify) {
-      try {
-        if (!process.env.COURIER_AUTH_TOKEN || !notificationTemplate) continue
-        const serverBase = process.env.CLIENT_URL || `http://localhost:${PORT}`
-        const retentionDays = SOFT_DELETE_RETENTION_DAYS
-        const purgeDate = new Date(user.deletedAt.getTime() + retentionDays * 24 * 60 * 60 * 1000)
-        const payload = {
-          message: {
-            to: { email: user.email },
-            template: notificationTemplate,
-            data: {
-              username: user.username,
-              purge_date: purgeDate.toISOString(),
-              days_left: Math.ceil((purgeDate - now) / (24 * 60 * 60 * 1000)),
-              cancel_url: `${serverBase}/settings`,
-              reminder_type: 'initial'
-            }
-          }
-        }
-
-        console.debug('Sending soft-delete initial notification to Courier:', { to: user.email, template: notificationTemplate })
-        await fetch('https://api.courier.com/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
-          },
-          body: JSON.stringify(payload)
-        })
-
-        user.deletionNotified = true
-        user.deletionNotificationSentAt = new Date()
-        await user.save()
-      } catch (err) {
-        console.error('Failed to send deletion notification for user', user._id, err)
+    
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`Port ${port} is busy, trying ${port + 1}...`)
+        startServer(port + 1)
+      } else {
+        console.error('Server error:', err)
+        process.exit(1)
       }
-    }
-
-    // Final notifications (e.g., 1 day before purge)
-    const FINAL_NOTIFY_DAYS = 1
-    const finalCutoffEnd = new Date(now.getTime() + FINAL_NOTIFY_DAYS * 24 * 60 * 60 * 1000)
-    const usersToFinalNotify = await User.find({
-      isDeleted: true,
-      deletedAt: { $exists: true, $ne: null },
-      deletionFinalNotified: false,
-      deletedAt: { $lt: finalCutoffEnd }
     })
-
-    for (const user of usersToFinalNotify) {
-      try {
-        if (!process.env.COURIER_AUTH_TOKEN || !notificationTemplate) continue
-        const serverBase = process.env.CLIENT_URL || `http://localhost:${PORT}`
-        const retentionDays = SOFT_DELETE_RETENTION_DAYS
-        const purgeDate = new Date(user.deletedAt.getTime() + retentionDays * 24 * 60 * 60 * 1000)
-        const payload = {
-          message: {
-            to: { email: user.email },
-            template: notificationTemplate,
-            data: {
-              username: user.username,
-              purge_date: purgeDate.toISOString(),
-              days_left: Math.ceil((purgeDate - now) / (24 * 60 * 60 * 1000)),
-              cancel_url: `${serverBase}/settings`,
-              reminder_type: 'final'
-            }
-          }
-        }
-
-        console.debug('Sending soft-delete final notification to Courier:', { to: user.email, template: notificationTemplate })
-        await fetch('https://api.courier.com/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
-          },
-          body: JSON.stringify(payload)
-        })
-
-        user.deletionFinalNotified = true
-        await user.save()
-      } catch (err) {
-        console.error('Failed to send final deletion notification for user', user._id, err)
-      }
-    }
-
-    // 2) Permanently purge users past the cutoff
-    const usersToPurge = await User.find({ isDeleted: true, deletedAt: { $lt: cutoff } })
-    for (const user of usersToPurge) {
-      await Reading.deleteMany({ userId: user._id.toString() })
-      // remove custom spreads created by this user
-      try {
-        const Spread = require('./models/Spread')
-        await Spread.deleteMany({ owner: user._id })
-      } catch (e) {
-        console.warn('Failed to delete spreads for user', user._id, e)
-      }
-      await User.findByIdAndDelete(user._id)
-      console.log(`Purged soft-deleted user ${user._id}`)
-    }
-  } catch (err) {
-    console.error('Error during soft-delete purge:', err)
   }
-}
 
-// Run on start and every 24h
-purgeSoftDeletedAccounts()
-setInterval(purgeSoftDeletedAccounts, purgeIntervalMs)
+  startServer(PORT)
+
+  // Scheduled purge for soft-deleted accounts (only for long-running server)
+  const SOFT_DELETE_RETENTION_DAYS = Number(process.env.SOFT_DELETE_RETENTION_DAYS || 30)
+  const purgeIntervalMs = 24 * 60 * 60 * 1000 // daily
+
+  const purgeSoftDeletedAccounts = async () => {
+    try {
+      const cutoff = new Date(Date.now() - SOFT_DELETE_RETENTION_DAYS * 24 * 60 * 60 * 1000)
+      const User = require('./models/User')
+      const Reading = require('./models/Reading')
+
+      // 1) Notify users whose deletion is coming up within NOTIFY_DAYS_BEFORE_PURGE and not yet notified
+      const NOTIFY_DAYS_BEFORE_PURGE = Number(process.env.NOTIFY_DAYS_BEFORE_PURGE || 7)
+      const now = new Date()
+      const notifyCutoffStart = new Date(now.getTime() - 1000) // now
+      const notifyCutoffEnd = new Date(now.getTime() + NOTIFY_DAYS_BEFORE_PURGE * 24 * 60 * 60 * 1000)
+
+      const notificationTemplate = process.env.COURIER_NOTIFICATION_TEMPLATE_ID || process.env.COURIER_TEMPLATE_ID
+
+      // Initial notifications (e.g., 7 days before purge)
+      const usersToNotify = await User.find({
+        isDeleted: true,
+        deletedAt: { $exists: true, $ne: null },
+        deletionNotified: false,
+        deletedAt: { $lt: notifyCutoffEnd }
+      })
+
+      for (const user of usersToNotify) {
+        try {
+          if (!process.env.COURIER_AUTH_TOKEN || !notificationTemplate) continue
+          const serverBase = process.env.CLIENT_URL || `http://localhost:${PORT}`
+          const retentionDays = SOFT_DELETE_RETENTION_DAYS
+          const purgeDate = new Date(user.deletedAt.getTime() + retentionDays * 24 * 60 * 60 * 1000)
+          const payload = {
+            message: {
+              to: { email: user.email },
+              template: notificationTemplate,
+              data: {
+                username: user.username,
+                purge_date: purgeDate.toISOString(),
+                days_left: Math.ceil((purgeDate - now) / (24 * 60 * 60 * 1000)),
+                cancel_url: `${serverBase}/settings`,
+                reminder_type: 'initial'
+              }
+            }
+          }
+
+          console.debug('Sending soft-delete initial notification to Courier:', { to: user.email, template: notificationTemplate })
+          await fetch('https://api.courier.com/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
+            },
+            body: JSON.stringify(payload)
+          })
+
+          user.deletionNotified = true
+          user.deletionNotificationSentAt = new Date()
+          await user.save()
+        } catch (err) {
+          console.error('Failed to send deletion notification for user', user._id, err)
+        }
+      }
+
+      // Final notifications (e.g., 1 day before purge)
+      const FINAL_NOTIFY_DAYS = 1
+      const finalCutoffEnd = new Date(now.getTime() + FINAL_NOTIFY_DAYS * 24 * 60 * 60 * 1000)
+      const usersToFinalNotify = await User.find({
+        isDeleted: true,
+        deletedAt: { $exists: true, $ne: null },
+        deletionFinalNotified: false,
+        deletedAt: { $lt: finalCutoffEnd }
+      })
+
+      for (const user of usersToFinalNotify) {
+        try {
+          if (!process.env.COURIER_AUTH_TOKEN || !notificationTemplate) continue
+          const serverBase = process.env.CLIENT_URL || `http://localhost:${PORT}`
+          const retentionDays = SOFT_DELETE_RETENTION_DAYS
+          const purgeDate = new Date(user.deletedAt.getTime() + retentionDays * 24 * 60 * 60 * 1000)
+          const payload = {
+            message: {
+              to: { email: user.email },
+              template: notificationTemplate,
+              data: {
+                username: user.username,
+                purge_date: purgeDate.toISOString(),
+                days_left: Math.ceil((purgeDate - now) / (24 * 60 * 60 * 1000)),
+                cancel_url: `${serverBase}/settings`,
+                reminder_type: 'final'
+              }
+            }
+          }
+
+          console.debug('Sending soft-delete final notification to Courier:', { to: user.email, template: notificationTemplate })
+          await fetch('https://api.courier.com/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
+            },
+            body: JSON.stringify(payload)
+          })
+
+          user.deletionFinalNotified = true
+          await user.save()
+        } catch (err) {
+          console.error('Failed to send final deletion notification for user', user._id, err)
+        }
+      }
+
+      // 2) Permanently purge users past the cutoff
+      const usersToPurge = await User.find({ isDeleted: true, deletedAt: { $lt: cutoff } })
+      for (const user of usersToPurge) {
+        await Reading.deleteMany({ userId: user._id.toString() })
+        // remove custom spreads created by this user
+        try {
+          const Spread = require('./models/Spread')
+          await Spread.deleteMany({ owner: user._id })
+        } catch (e) {
+          console.warn('Failed to delete spreads for user', user._id, e)
+        }
+        await User.findByIdAndDelete(user._id)
+        console.log(`Purged soft-deleted user ${user._id}`)
+      }
+    } catch (err) {
+      console.error('Error during soft-delete purge:', err)
+    }
+  }
+
+  // Run on start and every 24h
+  purgeSoftDeletedAccounts()
+  setInterval(purgeSoftDeletedAccounts, purgeIntervalMs)
+}
