@@ -180,12 +180,46 @@ const rawClient = process.env.CLIENT_URL || process.env.SERVER_URL || 'http://lo
 const normalized = normalizeOrigin(rawClient)
 const allowedOrigins = Array.isArray(normalized) ? normalized : (normalized ? [normalized] : [])
 
+// Compute allowed hostnames (strip www and normalize) for hostname matching
+function hostnameOf(urlOrHost) {
+  if (!urlOrHost) return null
+  try {
+    const u = new URL(urlOrHost)
+    return (u.hostname || '').replace(/^www\./i, '').toLowerCase()
+  } catch (e) {
+    // value might already be a bare hostname like "example.com"
+    return String(urlOrHost).replace(/^www\./i, '').toLowerCase()
+  }
+}
+
+const allowedHostnames = allowedOrigins.map(hostnameOf).filter(Boolean)
+
 app.use(cors({
   origin: function (origin, callback) {
-    // allow non-browser or same-origin requests with no origin (like Postman)
+    // allow non-browser or same-origin requests with no origin (like Postman, curl)
     if (!origin) return callback(null, true)
+
+    // direct exact match first (including scheme)
     if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true)
-    // not allowed
+
+    // try matching by hostname only (ignore scheme differences)
+    let incomingHost
+    try {
+      incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
+    } catch (e) {
+      // malformed origin header - deny
+      console.warn('CORS: malformed Origin header:', origin)
+      return callback(new Error('CORS policy: Origin not allowed'), false)
+    }
+
+    if (allowedHostnames.indexOf(incomingHost) !== -1) {
+      return callback(null, true)
+    }
+
+    // Not allowed - log for debugging and return an explicit error so the
+    // request doesn't proceed. The framework will convert this into a 403/500
+    // depending on the error handler; logging helps diagnose mismatched origins.
+    console.warn('CORS blocked origin', origin, { allowedOrigins, allowedHostnames })
     return callback(new Error('CORS policy: Origin not allowed'), false)
   },
   credentials: true
