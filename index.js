@@ -256,6 +256,21 @@ app.use('/api/readings', require('./routes/readings'))
 app.use('/api/querents', require('./routes/querents'))
 app.use('/api/tags', require('./routes/tags'))
 app.use('/api/health', require('./routes/health'))
+// Debug endpoint: reports which critical environment variables are set.
+// IMPORTANT: This endpoint intentionally does NOT return secret values.
+// Use it only temporarily in deployment to verify environment parity.
+app.get('/api/debug/env', (req, res) => {
+  const keys = [
+    'MONGODB_URI', 'JWT_SECRET', 'SESSION_SECRET', 'CLIENT_URL', 'SERVER_URL', 'NODE_ENV'
+  ]
+  const missing = []
+  const present = []
+  for (const k of keys) {
+    if (process.env[k]) present.push(k)
+    else missing.push(k)
+  }
+  res.json({ ok: missing.length === 0, present, missing })
+})
 app.use('/api/decks', require('./routes/decks'))
 app.use('/api/spreads', require('./routes/spreads'))
 app.use('/api/card-image', require('./routes/card-image'))
