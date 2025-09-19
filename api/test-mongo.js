@@ -59,8 +59,12 @@ module.exports = async function handler(req, res) {
   const probes = { srv: null, txt: null, tlsProbes: [] };
   try {
     if (uri.startsWith('mongodb+srv://')) {
-      // extract host between mongodb+srv:// and the next slash
-      const host = uri.split('mongodb+srv://')[1].split('/')[0].split('?')[0];
+      // extract host between mongodb+srv:// and the next slash, stripping credentials if present
+      // examples:
+      // mongodb+srv://user:pass@cluster0.xjpqn3c.mongodb.net/db -> capture cluster0.xjpqn3c.mongodb.net
+      // mongodb+srv://cluster0.xjpqn3c.mongodb.net/db -> capture cluster0.xjpqn3c.mongodb.net
+      const m = uri.match(/^mongodb\+srv:\/\/(?:[^@]+@)?([^\/\?]+)/i);
+      const host = m ? m[1] : uri.split('mongodb+srv://')[1].split('/')[0].split('?')[0];
       try {
         probes.srv = await dns.resolveSrv(host);
       } catch (e) {
