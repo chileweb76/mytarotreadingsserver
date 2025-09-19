@@ -37,23 +37,8 @@ if (!isServerless) {
 
 // (isServerless is declared above once)
 
-// Cached database connection for serverless reuse
-async function connectToDatabase() {
-  if (!process.env.MONGODB_URI) {
-    throw new Error('MONGODB_URI is not set')
-  }
-
-  if (global._mongoClientPromise) {
-    return global._mongoClientPromise
-  }
-
-  // Use Mongoose connection caching pattern
-  global._mongoClientPromise = mongoose.connect(process.env.MONGODB_URI, {
-    // keep defaults; you can add options here if needed
-  })
-
-  return global._mongoClientPromise
-}
+// Use a centralized serverless-safe DB connection helper
+const { connectToDatabase } = require('./utils/connectToDatabase')
 
 // Run optional seeding only when explicitly enabled
 async function runOptionalSeeding() {
