@@ -19,8 +19,8 @@ module.exports = async function fetchAndStoreRemoteImage(remoteUrl, serverBase, 
     return null
   }
 
-  const uploadsDir = path.join(__dirname, '..', 'uploads')
-  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true })
+  const { getUploadsDir } = require('./uploads')
+  const uploadsDir = getUploadsDir()
 
   const ext = path.extname(parsed.pathname) || '.jpg'
   const safe = crypto.randomBytes(8).toString('hex')

@@ -14,16 +14,28 @@ const passport = require('./config/passport')
 const app = express()
 
 const fs = require('fs')
-
-// Ensure uploads directory exists and serve it statically
-const uploadsDir = path.join(__dirname, 'uploads')
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir)
-}
-app.use('/uploads', express.static(uploadsDir))
-
+const os = require('os')
 // Helper to detect serverless environment (Vercel, AWS Lambda, etc.)
 const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FUNCTIONS_WORKER_RUNTIME)
+
+// Use safe uploads helper which will try to create project `uploads/`
+// but fall back to a per-app tmpdir when the project folder is not writable
+// (e.g. Vercel's /var/task). This avoids EROFS errors at module load time.
+const { getUploadsDir } = require('./utils/uploads')
+const uploadsDir = getUploadsDir()
+
+// Only mount the static uploads route when running a persistent server
+// (local / non-serverless). In serverless, uploads should be served from
+// external storage or handled via direct uploads to a CDN/storage provider.
+if (!isServerless) {
+  try {
+    app.use('/uploads', express.static(uploadsDir))
+  } catch (err) {
+    console.warn('Failed to mount uploads static route, skipping:', err && err.code)
+  }
+}
+
+// (isServerless is declared above once)
 
 // Cached database connection for serverless reuse
 async function connectToDatabase() {
@@ -212,6 +224,17 @@ app.get('/auth/verify', (req, res) => {
   const token = req.query.token || ''
   if (!token) return res.status(400).json({ error: 'Token is required' })
   return res.redirect(`/api/auth/verify?token=${encodeURIComponent(token)}`)
+})
+
+// Lightweight root handler: redirect to the configured client URL when present,
+// otherwise return a small JSON payload so `GET /` doesn't 404 during local
+// development or quick checks.
+app.get('/', (req, res) => {
+  const clientUrl = process.env.CLIENT_URL && process.env.CLIENT_URL.trim()
+  if (clientUrl) {
+    return res.redirect(clientUrl)
+  }
+  return res.json({ status: 'ok', message: 'MyTarotReadings API is running' })
 })
 
 // Error handling middleware

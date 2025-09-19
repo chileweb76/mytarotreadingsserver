@@ -39,8 +39,8 @@ const storage = multer.diskStorage({
     const fname = `${idPart}-${Date.now()}${ext}`
     // ensure uploads dir exists
     try {
-      const uploadsDir = path.join(__dirname, '..', 'uploads')
-      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true })
+      const { getUploadsDir } = require('../utils/uploads')
+      getUploadsDir()
     } catch (e) {
       // ignore - write will fail later and be handled
       console.warn('Could not ensure uploads dir exists', e)
@@ -512,7 +512,8 @@ router.put('/profile-picture', passport.authenticate('jwt', { session: false }),
 
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
 
-    const uploadsDir = path.join(__dirname, '..', 'uploads')
+  const { getUploadsDir } = require('../utils/uploads')
+  const uploadsDir = getUploadsDir()
     const serverBase = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`
     const originalFilename = req.file.filename
     const originalPath = path.join(uploadsDir, originalFilename)
@@ -577,7 +578,8 @@ router.delete('/profile-picture', passport.authenticate('jwt', { session: false 
       return res.json({ message: 'Profile picture cleared', profilePicture: user.profilePicture })
     }
 
-    const uploadsDir = path.join(__dirname, '..', 'uploads')
+  const { getUploadsDir } = require('../utils/uploads')
+  const uploadsDir = getUploadsDir()
     const deleteIfExists = async (url) => {
       if (!url) return
       try {

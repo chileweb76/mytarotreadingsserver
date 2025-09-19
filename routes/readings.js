@@ -10,8 +10,8 @@ const passport = require('passport')
 // Multer setup for reading image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dest = path.join(__dirname, '..', 'uploads', 'readings')
-    fs.mkdirSync(dest, { recursive: true })
+    const { getUploadsDir } = require('../utils/uploads')
+    const dest = getUploadsDir('readings')
     cb(null, dest)
   },
   filename: (req, file, cb) => {

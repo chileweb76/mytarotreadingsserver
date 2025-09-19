@@ -10,8 +10,8 @@ const passport = require('passport')
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const deckId = req.params.deckId
-    const dest = path.join(__dirname, '..', 'uploads', 'decks', deckId)
-    fs.mkdirSync(dest, { recursive: true })
+    const { getUploadsDir } = require('../utils/uploads')
+    const dest = getUploadsDir('decks', deckId)
     cb(null, dest)
   },
   filename: (req, file, cb) => {
