@@ -177,8 +177,32 @@ async function runOptionalSeeding() {
 })()
 
 // Middleware
+// CORS configuration - allow a single origin or a comma-separated list.
+// Normalize values (ensure scheme present) and validate request origins at runtime.
+function normalizeOrigin(raw) {
+  if (!raw) return null
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  // allow comma-separated lists
+  if (trimmed.includes(',')) return trimmed.split(',').map(s => normalizeOrigin(s)).filter(Boolean)
+  // already has scheme
+  if (/^https?:\/\//i.test(trimmed)) return trimmed.replace(/\/$/, '')
+  // add https as default when missing
+  return `https://${trimmed.replace(/\/$/, '')}`
+}
+
+const rawClient = process.env.CLIENT_URL || process.env.SERVER_URL || 'http://localhost:3000'
+const normalized = normalizeOrigin(rawClient)
+const allowedOrigins = Array.isArray(normalized) ? normalized : (normalized ? [normalized] : [])
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // allow non-browser or same-origin requests with no origin (like Postman)
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true)
+    // not allowed
+    return callback(new Error('CORS policy: Origin not allowed'), false)
+  },
   credentials: true
 }))
 // Increase default JSON size limit so large requests don't get rejected by
