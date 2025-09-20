@@ -194,7 +194,7 @@ function hostnameOf(urlOrHost) {
 
 const allowedHostnames = allowedOrigins.map(hostnameOf).filter(Boolean)
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
     // allow non-browser or same-origin requests with no origin (like Postman, curl)
     if (!origin) return callback(null, true)
@@ -223,7 +223,11 @@ app.use(cors({
     return callback(new Error('CORS policy: Origin not allowed'), false)
   },
   credentials: true
-}))
+}
+
+app.use(cors(corsOptions))
+// Ensure preflight (OPTIONS) requests always receive the CORS headers.
+app.options('*', cors(corsOptions))
 // Increase default JSON size limit so large requests don't get rejected by
 // the global parser before route-specific parsers run. Keep this moderate
 // and allow the export route to accept even bigger payloads.
