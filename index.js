@@ -299,6 +299,11 @@ app.get('/api/debug/env', (req, res) => {
 app.get('/api/ping', (req, res) => {
   res.json({ ok: true, message: 'pong', timestamp: new Date().toISOString() })
 })
+
+// Debug: return normalized allowed origins and hostnames (non-secret)
+app.get('/api/debug/cors', (req, res) => {
+  res.json({ ok: true, allowedOrigins, allowedHostnames })
+})
 app.use('/api/decks', require('./routes/decks'))
 app.use('/api/spreads', require('./routes/spreads'))
 app.use('/api/card-image', require('./routes/card-image'))
