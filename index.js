@@ -503,9 +503,7 @@ if (!isServerless) {
   setInterval(purgeSoftDeletedAccounts, purgeIntervalMs)
 }
 
-// When running in serverless (Vercel), export the Express app so the platform
-// can mount it. This prevents the 'No exports found' message when Vercel
-// expects an exported function or app.
-if (isServerless) {
-  module.exports = app
-}
+// Export the Express app so serverless platforms (Vercel, Cloud Functions)
+// can mount it. The server start and scheduled tasks remain guarded to avoid
+// long-running processes in serverless environments.
+module.exports = app
