@@ -294,6 +294,11 @@ app.get('/api/debug/env', (req, res) => {
   }
   res.json({ ok: missing.length === 0, present, missing })
 })
+
+// Lightweight ping endpoint for deployment health checks and routing verification
+app.get('/api/ping', (req, res) => {
+  res.json({ ok: true, message: 'pong', timestamp: new Date().toISOString() })
+})
 app.use('/api/decks', require('./routes/decks'))
 app.use('/api/spreads', require('./routes/spreads'))
 app.use('/api/card-image', require('./routes/card-image'))
