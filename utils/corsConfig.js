@@ -24,6 +24,10 @@ const candidates = []
 if (process.env.ALLOWED_ORIGINS) candidates.push(process.env.ALLOWED_ORIGINS)
 if (process.env.CLIENT_URL) candidates.push(process.env.CLIENT_URL)
 if (process.env.SERVER_URL) candidates.push(process.env.SERVER_URL)
+// When running on Vercel, runtime exposes VERCEL_URL (e.g. myproj.vercel.app).
+// Include it as an allowed origin so same-origin browser requests from the
+// deployed domain are accepted even if SERVER_URL/CLIENT_URL are not set.
+if (process.env.VERCEL_URL) candidates.push(`https://${process.env.VERCEL_URL}`)
 if (candidates.length === 0) candidates.push('http://localhost:3000')
 
 const joined = candidates.join(',')
