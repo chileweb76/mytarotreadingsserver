@@ -54,17 +54,15 @@ module.exports = (req, res) => {
       return
     }
 
-    // For GET requests, simply redirect to the client with the token preserved
-    // so the client can choose to POST it to /api/auth/verify (more reliable
-    // for serverless DB connections). This keeps email links clickable and
-    // avoids doing DB work in the edge wrapper which can sometimes time out.
+    // For GET requests invoked from email links, forward to the Express app
+    // so the API's verification logic runs server-side and can return the
+    // appropriate redirect or JSON response. This avoids sending users to a
+    // client page that may not exist and makes email clicks verify directly.
     if (req.method === 'GET') {
-      const token = (req.query && req.query.token) || ''
-      const { buildServerBase } = require('../../utils/serverBase')
-      const redirectBase = process.env.CLIENT_URL || buildServerBase(req)
-      const target = `${redirectBase.replace(/\/$/, '')}/auth/verify?token=${encodeURIComponent(token)}`
-      res.writeHead(302, { Location: target })
-      return res.end()
+      try {
+        if (!req.url.startsWith('/api')) req.url = `/api${req.url}`
+      } catch (e) {}
+      return app(req, res)
     }
 
     // Fallback: forward to Express app for anything else (including POST)
