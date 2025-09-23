@@ -59,10 +59,63 @@ module.exports = (req, res) => {
     // appropriate redirect or JSON response. This avoids sending users to a
     // client page that may not exist and makes email clicks verify directly.
     if (req.method === 'GET') {
-      try {
-        if (!req.url.startsWith('/api')) req.url = `/api${req.url}`
-      } catch (e) {}
-      return app(req, res)
+      // Serve a small HTML page that will POST the token to the API's POST
+      // /api/auth/verify endpoint from the browser. This avoids redirecting
+      // users to a client route that may not exist and gives immediate
+      // feedback while the serverless function does the DB work.
+      const token = (req.query && req.query.token) || ''
+      const clientBase = (process.env.CLIENT_URL || '').replace(/\/$/, '')
+      const tokenJson = JSON.stringify(token)
+      const clientBaseJson = JSON.stringify(clientBase)
+      const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Verifying…</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:2rem}</style>
+  </head>
+  <body>
+    <h1>Verifying your email…</h1>
+    <div id="status">Please wait — this may take a few seconds.</div>
+    <script>
+      (async function(){
+        const token = JSON.parse(${tokenJson});
+        const clientBase = JSON.parse(${clientBaseJson});
+        try {
+          const resp = await fetch('/api/auth/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+          });
+          const body = await resp.json().catch(() => ({}));
+          if (resp.ok) {
+            if (clientBase) {
+              window.location = clientBase + '/auth/success?verified=true'
+            } else {
+              document.getElementById('status').innerText = 'Email verified successfully.'
+              const pre = document.createElement('pre')
+              pre.textContent = JSON.stringify(body, null, 2)
+              document.body.appendChild(pre)
+            }
+          } else {
+            document.getElementById('status').innerText = 'Verification failed.'
+            const pre = document.createElement('pre')
+            pre.textContent = JSON.stringify(body, null, 2)
+            document.body.appendChild(pre)
+          }
+        } catch (e) {
+          document.getElementById('status').innerText = 'Verification error: ' + (e && e.message ? e.message : String(e))
+        }
+      })()
+    </script>
+  </body>
+</html>`
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.statusCode = 200
+      res.end(html)
+      return
     }
 
     // Fallback: forward to Express app for anything else (including POST)
