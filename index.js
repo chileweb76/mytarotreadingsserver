@@ -194,6 +194,23 @@ function normalizeOrigin(raw) {
 
 const { allowedOrigins, allowedHostnames } = require('./utils/corsConfig')
 
+// Ensure CLIENT_URL (frontend origin) is included in allowedOrigins so
+// verification and auth endpoints echo the correct origin for credentialed
+// requests. Also include localhost in non-production for easier local dev.
+try {
+  const clientUrlNormalized = normalizeOrigin(process.env.CLIENT_URL) || normalizeOrigin(process.env.NEXT_PUBLIC_CLIENT_URL) || null
+  if (clientUrlNormalized && allowedOrigins.indexOf(clientUrlNormalized) === -1) {
+    allowedOrigins.push(clientUrlNormalized)
+  }
+} catch (e) {
+  // ignore
+}
+
+if (process.env.NODE_ENV !== 'production') {
+  const local = normalizeOrigin('http://localhost:3000')
+  if (local && allowedOrigins.indexOf(local) === -1) allowedOrigins.push(local)
+}
+
 const corsOptions = {
   origin: function (origin, callback) {
     // allow non-browser or same-origin requests with no origin (like Postman, curl)

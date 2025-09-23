@@ -174,6 +174,8 @@ router.post('/register', async (req, res) => {
 })
 
 // Verify email route
+// Accept both GET (legacy links) and POST (client-side verification flow).
+router.options('/verify', (req, res) => res.sendStatus(204))
 router.get('/verify', async (req, res) => {
   try {
     const { token } = req.query
@@ -187,8 +189,13 @@ router.get('/verify', async (req, res) => {
     user.verificationExpires = null
     await user.save()
 
-    // redirect to client success page
-    return res.redirect(`${process.env.CLIENT_URL}/auth/success?verified=true`)
+    // redirect to client success page, normalize CLIENT_URL
+    const clientBase = (process.env.CLIENT_URL || process.env.NEXT_PUBLIC_CLIENT_URL || '').replace(/\/$/, '') || ''
+    if (clientBase) {
+      return res.redirect(`${clientBase}/auth/success?verified=true`)
+    }
+    // Fallback: return JSON when no client URL configured
+    return res.json({ ok: true, message: 'Email verified' })
   } catch (err) {
     console.error('Verification error:', err)
     return res.status(500).json({ error: 'Internal server error' })
@@ -199,6 +206,7 @@ router.get('/verify', async (req, res) => {
 // verification flows where the user is redirected to a client page which then
 // POSTs the token to the API. This is more reliable in serverless environments
 // where direct GET verification may hit cold-start timeouts when connecting to DB.
+router.options('/verify', (req, res) => res.sendStatus(204))
 router.post('/verify', async (req, res) => {
   try {
     const token = req.body && req.body.token
@@ -211,6 +219,22 @@ router.post('/verify', async (req, res) => {
     user.verificationToken = null
     user.verificationExpires = null
     await user.save()
+
+    // Echo CORS headers explicitly when Origin is present and allowed so
+    // browsers will accept the response when credentials are used.
+    const origin = req.headers.origin
+    if (origin) {
+      // If the origin is allowed by the app-level CORS config, echo it.
+      try {
+        const { allowedOrigins } = require('../utils/corsConfig')
+        if (allowedOrigins && allowedOrigins.indexOf(origin) !== -1) {
+          res.setHeader('Access-Control-Allow-Origin', origin)
+          res.setHeader('Access-Control-Allow-Credentials', 'true')
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
 
     return res.json({ ok: true, message: 'Email verified' })
   } catch (err) {
