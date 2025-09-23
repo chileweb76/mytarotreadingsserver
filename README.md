@@ -10,15 +10,11 @@ This repository contains the server for the MyTarotReadings application.
 
 - See project `package.json` scripts for local dev and test commands.
 
-## Session store (Upstash / Redis)
+## Session store (deprecated)
 
-This server can optionally use a Redis-backed session store (recommended for
-serverless deployments). To enable an Upstash or other Redis session store,
-set one of the following environment variables in your deployment:
-
-- `REDIS_URL` or `REDIS_TLS_URL` (Upstash TLS URL or redis:// / rediss:// URL)
+This project previously supported server-side sessions (Redis / Upstash / Mongo)
+for serverless deployments. The codebase has since moved to a stateless JWT-based
+authentication model which is more reliable for serverless platforms. Server-side
+session support has been removed. If you need server-side sessions in the future
+please open an issue or a PR to reintroduce a well-scoped session-store helper.
 - `USE_PERSISTENT_SESSIONS=true` to force persistent sessions in serverless
-
-If `REDIS_URL` is provided the server will attempt to configure `connect-redis`
-automatically. If Redis is not available, the server will fall back to
-`connect-mongo` when `MONGODB_URI` is set.

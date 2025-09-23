@@ -11,7 +11,6 @@ dotenv.config({ path: path.resolve(__dirname, '.env') })
 // lightweight early middleware so preflight OPTIONS can be answered quickly
 // in serverless environments.
 let mongoose
-let session
 let passport
 
 const app = express()
@@ -465,35 +464,10 @@ try {
   throw e
 }
 
-// Choose whether to enable server-side sessions.
-// In serverless environments we avoid MemoryStore because it doesn't persist
-// across invocations. By default we skip mounting express-session in serverless
-// functions and rely on stateless JWT cookies. Operators may force persistent
-// sessions in serverless by setting `USE_PERSISTENT_SESSIONS=true` and
-// configuring a supported store (e.g., REDIS_URL + connect-redis or
-// MONGODB_URI + connect-mongo). This code only mounts session middleware
-// when either we're running a non-serverless process or a persistent store
-// was successfully configured above.
-const wantPersistentInServerless = process.env.USE_PERSISTENT_SESSIONS === 'true'
-const sessionStoreConfigured = Boolean(sessionOptions.store)
-const sessionEnabled = (!isServerless) || (isServerless && wantPersistentInServerless && sessionStoreConfigured)
-
-if (sessionEnabled) {
-  app.use(session(sessionOptions))
-  console.log('Session middleware enabled', { isServerless, store: sessionStoreConfigured ? 'configured' : 'none' })
-} else {
-  // No-op session middleware to keep downstream code paths that expect
-  // req.session from crashing; most routes use JWT auth so this is safe.
-  app.use((req, res, next) => {
-    req.session = req.session || {}
-    next()
-  })
-  console.log('Session middleware disabled (serverless/stateless). To enable persistent sessions in serverless set USE_PERSISTENT_SESSIONS=true and configure a supported store (REDIS_URL or MONGODB_URI).')
-}
-
-// Initialize Passport
+// Stateless mode only: we removed server-side session middleware to keep the
+// application serverless-friendly and fully JWT-based. Passport is used with
+// its JWT strategy (stateless) so only `passport.initialize()` is required.
 app.use(passport.initialize())
-// passport.session() removed — we use stateless JWT authentication instead.
 
 // Routes
 // In serverless environments, ensure the database is initialized before
@@ -524,7 +498,7 @@ app.use('/api/health', require('./routes/health'))
 // Use it only temporarily in deployment to verify environment parity.
 app.get('/api/debug/env', (req, res) => {
   const keys = [
-    'MONGODB_URI', 'JWT_SECRET', 'SESSION_SECRET', 'CLIENT_URL', 'SERVER_URL', 'NODE_ENV'
+    'MONGODB_URI', 'JWT_SECRET', 'CLIENT_URL', 'SERVER_URL', 'NODE_ENV'
   ]
   const missing = []
   const present = []
