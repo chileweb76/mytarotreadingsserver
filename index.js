@@ -392,7 +392,7 @@ app.use((req, res, next) => {
 
   res.setHeader('Access-Control-Allow-Origin', allowOrigin)
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization')
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
   // Ensure caches/proxies vary by Origin so different origins receive the
   // correct CORS headers, and always send a header the browser can see.
@@ -425,7 +425,7 @@ app.options('/api/auth/*', (req, res) => {
 
   res.setHeader('Access-Control-Allow-Origin', allowOrigin)
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization')
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
   try { res.setHeader('Vary', 'Origin') } catch (e) {}
   res.setHeader('Access-Control-Max-Age', '3600')
@@ -463,7 +463,7 @@ const corsOptions = {
   // Allow cookies to be sent cross-site and expose useful headers
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Content-Length', 'X-Request-Id'],
   optionsSuccessStatus: 204
 }
@@ -527,7 +527,7 @@ app.options('*', (req, res) => {
 
   res.setHeader('Access-Control-Allow-Origin', allowOrigin)
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization')
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
   try { res.setHeader('Vary', 'Origin') } catch (e) {}
   res.setHeader('Access-Control-Max-Age', '3600')
