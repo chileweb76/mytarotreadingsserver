@@ -1,4 +1,4 @@
-const { allowedOrigins, allowedHostnames } = require('../utils/corsConfig');
+const { allowedOrigins, allowedHostnames } = require('../../utils/corsConfig');
 
 /**
  * Serverless function to handle CORS preflight and requests for /api/decks/:id

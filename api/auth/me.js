@@ -1,5 +1,5 @@
-const { ensureDatabase } = require('../utils/connectToDatabase')
-const { allowedOrigins, allowedHostnames } = require('../utils/corsConfig')
+const { ensureDatabase } = require('../../utils/connectToDatabase')
+const { allowedOrigins, allowedHostnames } = require('../../utils/corsConfig')
 
 async function handler(req, res) {
   await ensureDatabase()
@@ -53,7 +53,7 @@ async function handler(req, res) {
   }
 
   // Forward all non-OPTIONS requests to the Express app
-  const app = require('../index')
+  const app = require('../../index')
   return app(req, res)
 }
 
