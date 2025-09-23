@@ -46,8 +46,16 @@ async function connectToDatabase() {
           if (attachDatabasePool && typeof attachDatabasePool === 'function') {
             const client = mongoose.connection && mongoose.connection.client
             if (client) {
-              attachDatabasePool(client)
-              console.log('mongo: attached Vercel database pool')
+              try {
+                attachDatabasePool(client)
+                console.log('mongo: attached Vercel database pool')
+              } catch (attachErr) {
+                // Vercel's attachDatabasePool may throw if the pool is released
+                // outside of a request lifecycle (e.g. platform/edge events).
+                // Defensive: log and continue without letting this break the
+                // application startup.
+                console.warn('mongo: attachDatabasePool threw an error (ignored):', attachErr && attachErr.message ? attachErr.message : attachErr)
+              }
             } else {
               console.warn('mongo: mongoose.connection.client not available to attach pool')
             }
