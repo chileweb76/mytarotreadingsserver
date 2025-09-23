@@ -1,0 +1,16 @@
+mongo: using database name from MONGODB_DB_NAME= mytarotreadings
+mongo: connecting attempt 1/3 (serverSelectionTimeoutMS=8000)
+mongo: connected
+mongo: attached Vercel database pool
+✅ Connected to MongoDB Atlas (ensureDatabase)
+🚀 Server running on http://localhost:5001
+Register body: {"username":"testuser123","email":"testuser123@example.com","password":"password1","verifyPassword":"password1"}
+Scheduling verification email to Courier: {
+  to: 'testuser123@example.com',
+  template: '650M55F1KQ4XMNNR4H4Z3Z9EPQ73',
+  verifyUrl: 'http://localhost:5001/api/auth/verify?token=4b0f745f7432400d991fb6835479a66e56754cd9'
+}
+Registration error: TypeError: console.debug(...) is not a function
+    at /Users/chrishile/Desktop/my_web/mytarotreadingsserver/routes/auth.js:175:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Register body: {"username":"testuser123","email":"testuser123@example.com","password":"password1","verifyPassword":"password1"}

@@ -104,6 +104,10 @@ function absolutizeUploadUrl(url, req) {
 // Register new user
 router.post('/register', async (req, res) => {
   try {
+    // Helpful debug: log the incoming body shape when developing
+    if (process.env.NODE_ENV !== 'production') {
+      try { console.log('Register body:', JSON.stringify(req.body)) } catch (e) {}
+    }
     const { username, email: rawEmail, password, verifyPassword } = req.body
     const email = rawEmail && rawEmail.toString().trim().toLowerCase()
 
@@ -195,7 +199,11 @@ router.post('/register', async (req, res) => {
       }
     })
   } catch (error) {
-    console.error('Registration error:', error)
+    console.error('Registration error:', error && error.stack ? error.stack : error)
+    // In dev, include a little more detail so we can triage quickly
+    if (process.env.NODE_ENV !== 'production') {
+      return res.status(500).json({ error: 'Internal server error', details: error && error.message ? error.message : String(error) })
+    }
     res.status(500).json({ error: 'Internal server error' })
   }
 })
