@@ -88,9 +88,35 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 // JWT Strategy (only if secret is provided)
+// Accept tokens from Authorization header (Bearer) OR stateless cookie named 'token'.
+// We avoid adding cookie-parser as a hard dependency by parsing the Cookie
+// header directly if `req.cookies` is not present.
 if (process.env.JWT_SECRET && process.env.JWT_SECRET !== 'your-super-secret-jwt-key-change-this-in-production-12345') {
+  const cookieTokenExtractor = (req) => {
+    try {
+      if (!req) return null
+      // If cookie-parser is used upstream, prefer req.cookies
+      if (req.cookies && req.cookies.token) return req.cookies.token
+      // Fallback: parse raw Cookie header
+      const raw = req.headers && (req.headers.cookie || req.headers.Cookie)
+      if (!raw) return null
+      // Basic parse: split on ';' and find token key
+      const parts = raw.split(';').map(p => p.trim())
+      for (const p of parts) {
+        const idx = p.indexOf('=')
+        if (idx === -1) continue
+        const key = decodeURIComponent(p.slice(0, idx).trim())
+        const val = decodeURIComponent(p.slice(idx + 1).trim())
+        if (key === 'token') return val
+      }
+      return null
+    } catch (e) {
+      return null
+    }
+  }
+
   passport.use(new JwtStrategy({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([ExtractJwt.fromAuthHeaderAsBearerToken(), cookieTokenExtractor]),
       secretOrKey: process.env.JWT_SECRET
     },
     async (payload, done) => {

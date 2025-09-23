@@ -522,33 +522,10 @@ try {
   throw e
 }
 
-// Attempt to auto-configure an external session store (Redis/Upstash or Mongo)
-// in a serverless-safe way. This helper will set `sessionOptions.store` when
-// a supported store is available. We avoid awaiting the helper in serverless
-// environments to keep cold-starts fast; in non-serverless (traditional)
-// servers we let the configuration complete synchronously.
-try {
-  const sessionStoreHelper = require('./utils/sessionStore')
-  // Provide express-session module so connect-redis factory can use it
-  sessionOptions._sessionModule = session
-  const shouldAttempt = Boolean(process.env.REDIS_URL || process.env.REDIS_TLS_URL || process.env.UPSTASH_REDIS_REST_URL || process.env.MONGODB_URI)
-  if (shouldAttempt) {
-    const cfg = sessionStoreHelper.createSessionStore({ sessionOptions })
-    if (!isServerless) {
-      // wait for store to be ready for persistent servers
-      cfg.then(({ store }) => {
-        if (store) sessionOptions.store = store
-      }).catch(e => console.warn('sessionStore configuration failed:', e && e.message))
-    } else {
-      // Async attach for serverless so we don't delay cold starts
-      cfg.then(({ store }) => {
-        if (store) sessionOptions.store = store
-      }).catch(e => console.warn('sessionStore async configuration failed:', e && e.message))
-    }
-  }
-} catch (e) {
-  console.warn('sessionStore helper unavailable:', e && e.message)
-}
+// No external session auto-configuration: the app prefers stateless JWT
+// authentication in serverless environments. To enable persistent
+// sessions in non-serverless environments, configure `connect-mongo` and
+// `MONGODB_URI` or mount a session store manually.
 
 // Ensure passport configuration is loaded
 try {
