@@ -50,6 +50,30 @@ const storage = multer.diskStorage({
 })
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }) // 5MB
 
+// Small utility: race a promise against a timeout
+function withTimeout(promise, ms, errMsg = 'operation timeout') {
+  let timeoutId
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(errMsg)), ms)
+  })
+  return Promise.race([promise.finally(() => clearTimeout(timeoutId)), timeout])
+}
+
+// Helper to echo CORS headers when an Origin header is present and allowed
+function echoCorsIfAllowed(req, res) {
+  try {
+    const origin = req.headers && req.headers.origin
+    if (!origin) return
+    const { allowedOrigins } = require('../utils/corsConfig')
+    if (allowedOrigins && allowedOrigins.indexOf(origin) !== -1) {
+      res.setHeader('Access-Control-Allow-Origin', origin)
+      res.setHeader('Access-Control-Allow-Credentials', 'true')
+    }
+  } catch (e) {
+    // ignore errors here
+  }
+}
+
 // Generate JWT token
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' })
@@ -120,42 +144,45 @@ router.post('/register', async (req, res) => {
     // expires in 24 hours
     user.verificationExpires = Date.now() + 24 * 60 * 60 * 1000
 
-  await user.save()
+  // save user with a short timeout so DB hangs don't block registration indefinitely
+  await withTimeout(user.save(), 5000, 'user.save timeout')
 
-  // send verification email via Courier (if configured)
-    // Prefer a verify-specific template, fallback to generic template envs when present
+  // send verification email via Courier (if configured). Fire-and-forget so slow
+  // mail providers don't block the registration response. Log any failure.
     const courierTemplateId = process.env.COURIER_VERIFY_TEMPLATE_ID || process.env.COURIER_TEMPLATE_ID || process.env.COURIER_RESET_TEMPLATE_ID
     if (process.env.COURIER_AUTH_TOKEN && courierTemplateId) {
-      try {
-  // build a server-side verify URL so the link hits this API's /api/auth/verify route
-  const serverBase = `${req.protocol}://${req.get('host')}`
-  const verifyUrl = `${serverBase}/api/auth/verify?token=${verificationToken}`
-        const payload = {
-          message: {
-            to: { email },
-            template: courierTemplateId,
-            data: {
-              username: username,
-              verify_url: verifyUrl,
-              verifyUrl: verifyUrl
-            }
+      // build a server-side verify URL so the link hits this API's /api/auth/verify route
+      const serverBase = `${req.protocol}://${req.get('host')}`
+      const verifyUrl = `${serverBase}/api/auth/verify?token=${verificationToken}`
+      const payload = {
+        message: {
+          to: { email },
+          template: courierTemplateId,
+          data: {
+            username: username,
+            verify_url: verifyUrl,
+            verifyUrl: verifyUrl
           }
         }
-
-        // debug log (no sensitive tokens)
-        console.debug('Sending verification email payload to Courier:', { to: email, template: courierTemplateId, verifyUrl })
-
-        await fetch('https://api.courier.com/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
-          },
-          body: JSON.stringify(payload)
-        })
-      } catch (err) {
-        console.error('Failed to send verification email:', err)
       }
+
+      console.debug('Scheduling verification email to Courier:', { to: email, template: courierTemplateId, verifyUrl })
+      // fire-and-forget but catch/log errors
+      (async () => {
+        try {
+          await withTimeout(fetch('https://api.courier.com/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
+            },
+            body: JSON.stringify(payload)
+          }), 7000, 'courier.send timeout')
+          console.info('Verification email scheduled/sent to Courier for', email)
+        } catch (err) {
+          console.error('Failed to send verification email (background):', err)
+        }
+      })()
     }
 
     // Do NOT issue JWT until email is verified
@@ -181,13 +208,14 @@ router.get('/verify', async (req, res) => {
     const { token } = req.query
     if (!token) return res.status(400).json({ error: 'Token is required' })
 
-    const user = await User.findOne({ verificationToken: token, verificationExpires: { $gt: Date.now() } })
+    // Wrap DB ops in timeout to avoid long cold-start DB hangs
+    const user = await withTimeout(User.findOne({ verificationToken: token, verificationExpires: { $gt: Date.now() } }).exec(), 5000, 'DB lookup timeout')
     if (!user) return res.status(400).json({ error: 'Invalid or expired token' })
 
     user.isEmailVerified = true
     user.verificationToken = null
     user.verificationExpires = null
-    await user.save()
+    await withTimeout(user.save(), 5000, 'DB save timeout')
 
     // redirect to client success page, normalize CLIENT_URL
     const clientBase = (process.env.CLIENT_URL || process.env.NEXT_PUBLIC_CLIENT_URL || '').replace(/\/$/, '') || ''
@@ -211,30 +239,18 @@ router.post('/verify', async (req, res) => {
   try {
     const token = req.body && req.body.token
     if (!token) return res.status(400).json({ error: 'Token is required' })
-
-    const user = await User.findOne({ verificationToken: token, verificationExpires: { $gt: Date.now() } })
+    // use timed DB lookup/save
+    const user = await withTimeout(User.findOne({ verificationToken: token, verificationExpires: { $gt: Date.now() } }).exec(), 5000, 'DB lookup timeout')
     if (!user) return res.status(400).json({ error: 'Invalid or expired token' })
 
     user.isEmailVerified = true
     user.verificationToken = null
     user.verificationExpires = null
-    await user.save()
+    await withTimeout(user.save(), 5000, 'DB save timeout')
 
     // Echo CORS headers explicitly when Origin is present and allowed so
     // browsers will accept the response when credentials are used.
-    const origin = req.headers.origin
-    if (origin) {
-      // If the origin is allowed by the app-level CORS config, echo it.
-      try {
-        const { allowedOrigins } = require('../utils/corsConfig')
-        if (allowedOrigins && allowedOrigins.indexOf(origin) !== -1) {
-          res.setHeader('Access-Control-Allow-Origin', origin)
-          res.setHeader('Access-Control-Allow-Credentials', 'true')
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
+    echoCorsIfAllowed(req, res)
 
     return res.json({ ok: true, message: 'Email verified' })
   } catch (err) {
@@ -257,41 +273,45 @@ router.post('/resend', async (req, res) => {
     const verificationToken = crypto.randomBytes(20).toString('hex')
     user.verificationToken = verificationToken
     user.verificationExpires = Date.now() + 24 * 60 * 60 * 1000
-    await user.save()
+    await withTimeout(user.save(), 5000, 'user.save timeout')
 
-    // send via Courier if configured
+    // send via Courier if configured (background)
     const courierTemplateId = process.env.COURIER_VERIFY_TEMPLATE_ID || process.env.COURIER_TEMPLATE_ID || process.env.COURIER_RESET_TEMPLATE_ID
     if (process.env.COURIER_AUTH_TOKEN && courierTemplateId) {
-      try {
-  // build a server-side verify URL so the link hits this API's /api/auth/verify route
-  const serverBase = `${req.protocol}://${req.get('host')}`
-  const verifyUrl = `${serverBase}/api/auth/verify?token=${verificationToken}`
-        const payload = {
-          message: {
-            to: { email },
-            template: courierTemplateId,
-            data: {
-              username: user.username,
-              verify_url: verifyUrl,
-              verifyUrl: verifyUrl
-            }
+      const serverBase = `${req.protocol}://${req.get('host')}`
+      const verifyUrl = `${serverBase}/api/auth/verify?token=${verificationToken}`
+      const payload = {
+        message: {
+          to: { email },
+          template: courierTemplateId,
+          data: {
+            username: user.username,
+            verify_url: verifyUrl,
+            verifyUrl: verifyUrl
           }
         }
-
-        console.debug('Resend verification payload to Courier:', { to: email, template: courierTemplateId, verifyUrl })
-
-        await fetch('https://api.courier.com/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
-          },
-          body: JSON.stringify(payload)
-        })
-      } catch (err) {
-        console.error('Failed to send verification email:', err)
       }
+
+      console.debug('Scheduling resend verification email (background):', { to: email, template: courierTemplateId, verifyUrl })
+      (async () => {
+        try {
+          await withTimeout(fetch('https://api.courier.com/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
+            },
+            body: JSON.stringify(payload)
+          }), 7000, 'courier.send timeout')
+          console.info('Resend verification email sent for', email)
+        } catch (err) {
+          console.error('Failed to resend verification email (background):', err)
+        }
+      })()
     }
+
+    // Echo CORS when present so client accepts response
+    echoCorsIfAllowed(req, res)
 
     return res.json({ message: 'Verification email resent if configured' })
   } catch (err) {
