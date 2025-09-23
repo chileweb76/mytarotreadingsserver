@@ -1,11 +1,10 @@
-const { getCorsConfig } = require('../../utils/corsConfig');
+const { allowedOrigins, allowedHostnames } = require('../../utils/corsConfig');
 
 /**
  * Serverless function to handle CORS preflight and requests for /api/spreads/:id
  */
 module.exports = async (req, res) => {
   try {
-    const { allowedOrigins, allowedHostnames } = getCorsConfig();
     const origin = req.headers.origin;
     const requestHost = req.headers.host;
     
