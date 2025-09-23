@@ -101,6 +101,18 @@ function absolutizeUploadUrl(url, req) {
   return url
 }
 
+// Build a reliable server base URL for links sent via email.
+// Prefer `process.env.SERVER_URL` when configured (recommended for deployments),
+// otherwise infer from the incoming request and honor `X-Forwarded-Proto`.
+function buildServerBase(req) {
+  if (process.env.SERVER_URL && process.env.SERVER_URL.trim()) {
+    return process.env.SERVER_URL.trim().replace(/\/$/, '')
+  }
+  const proto = (req && req.headers && (req.headers['x-forwarded-proto'] || req.headers['x-forwarded-protocol'])) || req.protocol || 'https'
+  const host = (req && req.get && req.get('host')) || ''
+  return `${proto}://${host}`.replace(/\/$/, '')
+}
+
 // Register new user
 router.post('/register', async (req, res) => {
   try {
@@ -156,7 +168,7 @@ router.post('/register', async (req, res) => {
     const courierTemplateId = process.env.COURIER_VERIFY_TEMPLATE_ID || process.env.COURIER_TEMPLATE_ID || process.env.COURIER_RESET_TEMPLATE_ID
     if (process.env.COURIER_AUTH_TOKEN && courierTemplateId) {
       // build a server-side verify URL so the link hits this API's /api/auth/verify route
-      const serverBase = `${req.protocol}://${req.get('host')}`
+      const serverBase = buildServerBase(req)
       const verifyUrl = `${serverBase}/api/auth/verify?token=${verificationToken}`
       const payload = {
         message: {
@@ -170,7 +182,7 @@ router.post('/register', async (req, res) => {
         }
       }
 
-  try { require('../utils/log').debug('Scheduling verification email to Courier:', { to: email, template: courierTemplateId, verifyUrl }) } catch (e) {}
+  try { require('../utils/log').debug('Scheduling verification email to Courier (token redacted):', { to: email, template: courierTemplateId }) } catch (e) {}
       // fire-and-forget but catch/log errors
       (async () => {
         try {
@@ -286,7 +298,7 @@ router.post('/resend', async (req, res) => {
     // send via Courier if configured (background)
     const courierTemplateId = process.env.COURIER_VERIFY_TEMPLATE_ID || process.env.COURIER_TEMPLATE_ID || process.env.COURIER_RESET_TEMPLATE_ID
     if (process.env.COURIER_AUTH_TOKEN && courierTemplateId) {
-      const serverBase = `${req.protocol}://${req.get('host')}`
+      const serverBase = buildServerBase(req)
       const verifyUrl = `${serverBase}/api/auth/verify?token=${verificationToken}`
       const payload = {
         message: {
@@ -300,7 +312,7 @@ router.post('/resend', async (req, res) => {
         }
       }
 
-  try { require('../utils/log').debug('Scheduling resend verification email (background):', { to: email, template: courierTemplateId, verifyUrl }) } catch (e) {}
+  try { require('../utils/log').debug('Scheduling resend verification email (background, token redacted):', { to: email, template: courierTemplateId }) } catch (e) {}
       (async () => {
         try {
           await withTimeout(fetch('https://api.courier.com/send', {
