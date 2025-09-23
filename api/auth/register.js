@@ -22,10 +22,7 @@ function hostnameOf(urlOrHost) {
   }
 }
 
-const rawClient = process.env.CLIENT_URL || process.env.SERVER_URL || null
-const normalized = normalizeOrigin(rawClient)
-const allowedOrigins = Array.isArray(normalized) ? normalized : (normalized ? [normalized] : [])
-const allowedHostnames = allowedOrigins.map(hostnameOf).filter(Boolean)
+const { allowedOrigins, allowedHostnames } = require('../../utils/corsConfig')
 
 module.exports = (req, res) => {
   const origin = req.headers.origin
@@ -66,6 +63,31 @@ module.exports = (req, res) => {
     // short-circuit preflight with no body
     res.status(204).end()
     return
+  }
+
+  // For POST requests, ensure we set the Access-Control-Allow-Origin header
+  // when the origin is allowed so browsers see the header on the actual response.
+  if (req.method === 'POST') {
+    if (origin) {
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        res.setHeader('Access-Control-Allow-Origin', origin)
+      } else {
+        let incomingHost
+        try {
+          incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
+        } catch (e) {
+          res.status(403).end('Forbidden')
+          return
+        }
+        if (allowedHostnames.indexOf(incomingHost) !== -1) {
+          res.setHeader('Access-Control-Allow-Origin', origin)
+        } else {
+          res.status(403).end('Forbidden')
+          return
+        }
+      }
+      res.setHeader('Access-Control-Allow-Credentials', 'true')
+    }
   }
 
   // For non-OPTIONS, forward to Express app. Ensure req.url is what Express expects.
