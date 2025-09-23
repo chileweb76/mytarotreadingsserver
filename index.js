@@ -454,78 +454,8 @@ app.options('*', cors(corsOptions))
 // and allow the export route to accept even bigger payloads.
 app.use(express.json({ limit: '10mb' }))
 
-// Session configuration (for Passport)
-// Session configuration (for Passport)
-// In production/serverless we should avoid the default MemoryStore which
-// is not suitable for production. If `connect-mongo` is available and
-// `MONGODB_URI` is configured, prefer a Mongo-backed session store.
-const sessionOptions = {
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}
-
-let mongoStoreAvailable = false
-// In serverless environments, avoid initializing connect-mongo at module load
-// time because it may await DB clients and contribute to cold-start latency.
-// We'll fall back to MemoryStore in serverless. In persistent servers we
-// continue to prefer connect-mongo for session persistence.
-if (!isServerless && process.env.MONGODB_URI) {
-  try {
-    const MongoStore = require('connect-mongo')
-    if (MongoStore && typeof MongoStore.create === 'function') {
-      const clientPromise = (async () => {
-        try {
-          await connectToDatabase()
-          return mongoose.connection.getClient ? mongoose.connection.getClient() : (mongoose.connection && mongoose.connection.client)
-        } catch (e) {
-          console.warn('connect-mongo: failed to obtain mongoose client, falling back to mongoUrl:', e)
-          return null
-        }
-      })()
-
-      sessionOptions.store = MongoStore.create({ clientPromise, mongoUrl: process.env.MONGODB_URI })
-      mongoStoreAvailable = true
-    }
-  } catch (e) {
-    console.warn('connect-mongo not available - using default MemoryStore. Install connect-mongo for production sessions.')
-  }
-} else if (isServerless) {
-  // Running serverless: do not configure a persistent session store here to
-  // avoid unnecessary DB coupling during cold starts. MemoryStore will be used
-  // (not ideal for production, but acceptable in serverless functions that
-  // primarily use JWTs for auth). Log for visibility.
-  console.log('Serverless runtime detected: skipping connect-mongo session store initialization')
-}
-
-if (!mongoStoreAvailable && process.env.NODE_ENV === 'production') {
-  if (!isServerless) {
-    // Persistent production server using the built-in MemoryStore is unsafe
-    console.warn('Warning: connect.session() MemoryStore is not designed for a production environment, as it will leak memory and will not scale past a single process.')
-  } else {
-    // Running serverless in production: MemoryStore will not persist across
-    // invocations. Inform the operator about recommended alternatives.
-    console.warn('Serverless production detected: session MemoryStore will not persist across invocations. Consider using stateless cookies (JWT), a managed Redis service (e.g. Upstash), or a centralized session store to persist sessions between function invocations.')
-  }
-}
-
-// Require express-session and passport here (deferred requires to reduce
-// module-load cost). Ensure `session` is the session middleware function.
-try {
-  if (!session) session = require('express-session')
-} catch (e) {
-  console.error('Failed to require express-session:', e)
-  throw e
-}
-
-// No external session auto-configuration: the app prefers stateless JWT
-// authentication in serverless environments. To enable persistent
-// sessions in non-serverless environments, configure `connect-mongo` and
-// `MONGODB_URI` or mount a session store manually.
+// Stateless JWT preferred: session middleware removed to keep the server
+// serverless-friendly and avoid relying on `express-session` in production.
 
 // Ensure passport configuration is loaded
 try {
@@ -563,14 +493,7 @@ if (sessionEnabled) {
 
 // Initialize Passport
 app.use(passport.initialize())
-if (sessionEnabled) {
-  app.use(passport.session())
-} else {
-  // When sessions are disabled, ensure code that expects session-backed
-  // passport doesn't attempt to use it. Most authentication is JWT-based
-  // (passport JWT strategy) so passport.session is not required in serverless.
-  console.info('passport.session() not mounted because sessions are disabled (stateless mode)')
-}
+// passport.session() removed — we use stateless JWT authentication instead.
 
 // Routes
 // In serverless environments, ensure the database is initialized before
