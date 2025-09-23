@@ -1,9 +1,7 @@
-const { getCorsConfig } = require('../utils/corsConfig');
+const { getCorsConfig } = require('../../utils/corsConfig');
 
 /**
- * Unified serverless function to handle CORS preflight for all dynamic :id routes
- * This consolidates what would be multiple individual [id].js files into one function
- * Handles: /api/decks/:id, /api/readings/:id, /api/querents/:id, /api/tags/:id, /api/spreads/:id
+ * Serverless function to handle CORS preflight and requests for /api/spreads/:id
  */
 module.exports = async (req, res) => {
   try {
@@ -64,39 +62,21 @@ module.exports = async (req, res) => {
       }
     }
     
-    // For non-OPTIONS requests, we need to forward to the main Express app
-    // Extract model type and ID from query parameters (set by Vercel rewrites)
-    const url = new URL(req.url, `https://${req.headers.host}`);
-    const model = url.searchParams.get('model');
-    const id = url.searchParams.get('id');
+    // For non-OPTIONS requests, forward to the main Express app
+    const app = require('../../index.js');
     
-    if (!model || !id) {
-      return res.status(400).json({ error: 'Missing model or id parameter' });
-    }
-    
-    const validModels = ['decks', 'readings', 'querents', 'tags', 'spreads'];
-    
-    if (!validModels.includes(model)) {
-      return res.status(404).json({ error: 'Model not found' });
-    }
-    
-    // Import and use the main Express app
-    const app = require('../index.js');
-    
-    // Rewrite the URL to match Express route expectations
-    req.url = `/api/${model}/${id}`;
-    
-    // Forward to Express app with CORS headers already set
+    // Set CORS headers for the actual request
     if (isAllowed && allowedOrigin) {
       res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
       res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
     
+    // Forward to Express app
     return app(req, res);
     
   } catch (error) {
-    console.error('Dynamic routes serverless error:', error);
+    console.error('Spreads serverless error:', error);
     return res.status(500).json({ 
       error: 'Internal server error',
       message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
