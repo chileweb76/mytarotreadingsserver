@@ -240,7 +240,7 @@ const purgeSoftDeletedAccounts = async () => {
           }
         }
 
-        console.debug('Sending soft-delete initial notification to Courier:', { to: user.email, template: notificationTemplate })
+          try { require('./utils/log').debug('Sending soft-delete initial notification to Courier:', { to: user.email, template: notificationTemplate }) } catch (e) {}
         await fetch('https://api.courier.com/send', {
           method: 'POST',
           headers: {
@@ -288,7 +288,7 @@ const purgeSoftDeletedAccounts = async () => {
           }
         }
 
-        console.debug('Sending soft-delete final notification to Courier:', { to: user.email, template: notificationTemplate })
+  try { require('./utils/log').debug('Sending soft-delete final notification to Courier:', { to: user.email, template: notificationTemplate }) } catch (e) {}
         await fetch('https://api.courier.com/send', {
           method: 'POST',
           headers: {
@@ -503,7 +503,14 @@ if (!isServerless && process.env.MONGODB_URI) {
 }
 
 if (!mongoStoreAvailable && process.env.NODE_ENV === 'production') {
-  console.warn('Warning: connect.session() MemoryStore is not designed for a production environment, as it will leak memory, and will not scale past a single process.')
+  if (!isServerless) {
+    // Persistent production server using the built-in MemoryStore is unsafe
+    console.warn('Warning: connect.session() MemoryStore is not designed for a production environment, as it will leak memory and will not scale past a single process.')
+  } else {
+    // Running serverless in production: MemoryStore will not persist across
+    // invocations. Inform the operator about recommended alternatives.
+    console.warn('Serverless production detected: session MemoryStore will not persist across invocations. Consider using stateless cookies (JWT), a managed Redis service (e.g. Upstash), or a centralized session store to persist sessions between function invocations.')
+  }
 }
 
 // Require express-session and passport here (deferred requires to reduce

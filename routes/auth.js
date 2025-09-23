@@ -170,7 +170,7 @@ router.post('/register', async (req, res) => {
         }
       }
 
-      console.debug('Scheduling verification email to Courier:', { to: email, template: courierTemplateId, verifyUrl })
+  try { require('../utils/log').debug('Scheduling verification email to Courier:', { to: email, template: courierTemplateId, verifyUrl }) } catch (e) {}
       // fire-and-forget but catch/log errors
       (async () => {
         try {
@@ -300,7 +300,7 @@ router.post('/resend', async (req, res) => {
         }
       }
 
-      console.debug('Scheduling resend verification email (background):', { to: email, template: courierTemplateId, verifyUrl })
+  try { require('../utils/log').debug('Scheduling resend verification email (background):', { to: email, template: courierTemplateId, verifyUrl }) } catch (e) {}
       (async () => {
         try {
           await withTimeout(fetch('https://api.courier.com/send', {
@@ -361,7 +361,7 @@ router.post('/forgot', async (req, res) => {
           }
         }
 
-        console.debug('Sending password reset payload to Courier:', { to: email, template: courierTemplateId, resetUrl })
+  try { require('../utils/log').debug('Sending password reset payload to Courier:', { to: email, template: courierTemplateId, resetUrl }) } catch (e) {}
 
         await fetch('https://api.courier.com/send', {
           method: 'POST',
@@ -608,8 +608,8 @@ router.put('/profile-picture', passport.authenticate('jwt', { session: false }),
   })
 }, async (req, res) => {
   try {
-    console.debug('/api/auth/profile-picture called, req.user id=', req.user && req.user._id ? req.user._id.toString() : null)
-    console.debug('Uploaded file object (multer):', !!req.file, req.file && { originalname: req.file.originalname, filename: req.file.filename, size: req.file.size })
+  try { require('../utils/log').debug('/api/auth/profile-picture called, req.user id=', req.user && req.user._id ? req.user._id.toString() : null) } catch (e) {}
+  try { require('../utils/log').debug('Uploaded file object (multer):', !!req.file, req.file && { originalname: req.file.originalname, filename: req.file.filename, size: req.file.size }) } catch (e) {}
     const user = await User.findById(req.user && req.user._id)
     if (!user) return res.status(401).json({ error: 'Unauthorized: user not found' })
 

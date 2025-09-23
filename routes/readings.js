@@ -174,8 +174,8 @@ router.put('/:id', async (req, res) => {
     // Accept additional writable fields on update so explicit Save persists everything
     const { question, interpretation, outcome, dateTime, drawnCards, image, querent, spread, deck, selectedTags } = req.body
     const userId = req.user?.id || req.headers['x-user-id']
-    // Debug: log incoming update body
-    try { console.debug('[readings PUT] id=', id, 'body=', req.body, 'headers x-user-id=', req.headers['x-user-id']) } catch (e) {}
+  // Debug: log incoming update body
+  try { require('../utils/log').debug('[readings PUT] id=', id, 'body=', req.body, 'headers x-user-id=', req.headers['x-user-id']) } catch (e) {}
 
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' })
@@ -198,7 +198,7 @@ router.put('/:id', async (req, res) => {
       console.warn('[readings PUT] Reading not found for id (sanitized):', idSan, 'original id:', id)
       return res.status(404).json({ error: 'Reading not found' })
     }
-    try { console.debug('[readings PUT] found reading:', { id: String(reading._id), userId: reading.userId ? String(reading.userId) : null }) } catch (e) {}
+  try { require('../utils/log').debug('[readings PUT] found reading:', { id: String(reading._id), userId: reading.userId ? String(reading.userId) : null }) } catch (e) {}
 
     if (reading.userId?.toString() !== userId) {
       return res.status(403).json({ error: 'Not authorized to edit this reading' })
@@ -219,7 +219,7 @@ router.put('/:id', async (req, res) => {
             if (!selfQuerent) {
               selfQuerent = new Querent({ name: 'Self', userId: null })
               await selfQuerent.save()
-              console.debug('[readings PUT] created global Self querent')
+              try { require('../utils/log').debug('[readings PUT] created global Self querent') } catch (e) {}
             }
             resolvedQuerentForUpdate = selfQuerent._id
           } else if (mongoose.Types.ObjectId.isValid(incomingQuerent)) {
@@ -383,8 +383,8 @@ router.post('/', async (req, res) => {
 
     // Debug: log full body and effective user for troubleshooting
     try {
-      console.debug('[readings POST] body:', req.body)
-      console.debug('[readings POST] headers x-user-id:', req.headers['x-user-id'], 'effectiveUserId:', effectiveUserId)
+      require('../utils/log').debug('[readings POST] body:', req.body)
+      require('../utils/log').debug('[readings POST] headers x-user-id:', req.headers['x-user-id'], 'effectiveUserId:', effectiveUserId)
     } catch (e) { /* ignore */ }
 
     // For debugging: list querents that exist for this effective user so we can
@@ -393,9 +393,9 @@ router.post('/', async (req, res) => {
       try {
         const Querent = require('../models/Querent')
         const qlist = await Querent.find({ userId: effectiveUserIdStr }).select('_id name').lean()
-        console.debug('[readings POST] querents for effectiveUserId:', effectiveUserIdStr, qlist.map(q => ({ _id: String(q._id), name: q.name })))
+  try { require('../utils/log').debug('[readings POST] querents for effectiveUserId:', effectiveUserIdStr, qlist.map(q => ({ _id: String(q._id), name: q.name }))) } catch (e) {}
       } catch (e) {
-        console.debug('[readings POST] failed to list querents for user:', e && e.message)
+  try { require('../utils/log').debug('[readings POST] failed to list querents for user:', e && e.message) } catch (e) {}
       }
     }
 
@@ -418,7 +418,7 @@ router.post('/', async (req, res) => {
             if (!selfQuerent) {
               selfQuerent = new Querent({ name: 'Self', userId: null })
               await selfQuerent.save()
-              console.debug('[readings POST] created global Self querent')
+              try { require('../utils/log').debug('[readings POST] created global Self querent') } catch (e) {}
             }
             resolvedQuerent = selfQuerent._id
           } else if (mongoose.Types.ObjectId.isValid(incomingQuerent)) {
@@ -454,8 +454,8 @@ router.post('/', async (req, res) => {
 
     // Debug: log incoming querent and resolved result to help diagnose unexpected nulls
     try {
-      console.debug('[readings POST] incoming querent:', { rawQuerent: querent, type: typeof querent })
-      console.debug('[readings POST] resolvedQuerent before coercion:', { resolvedQuerent, effectiveUserId })
+      require('../utils/log').debug('[readings POST] incoming querent:', { rawQuerent: querent, type: typeof querent })
+      require('../utils/log').debug('[readings POST] resolvedQuerent before coercion:', { resolvedQuerent, effectiveUserId })
     } catch (e) { /* ignore logging errors */ }
 
     // Coerce resolvedQuerent to an ObjectId when appropriate to avoid Mongoose casting issues
@@ -506,7 +506,7 @@ router.post('/', async (req, res) => {
       .populate('selectedTags', 'name isGlobal')
 
     try {
-      console.debug('[readings POST] saved reading querent:', { querent: populated.querent })
+      require('../utils/log').debug('[readings POST] saved reading querent:', { querent: populated.querent })
     } catch (e) { /* ignore */ }
 
     console.log('📝 Reading saved to MongoDB:', savedReading._id)
