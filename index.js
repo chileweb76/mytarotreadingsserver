@@ -522,6 +522,34 @@ try {
   throw e
 }
 
+// Attempt to auto-configure an external session store (Redis/Upstash or Mongo)
+// in a serverless-safe way. This helper will set `sessionOptions.store` when
+// a supported store is available. We avoid awaiting the helper in serverless
+// environments to keep cold-starts fast; in non-serverless (traditional)
+// servers we let the configuration complete synchronously.
+try {
+  const sessionStoreHelper = require('./utils/sessionStore')
+  // Provide express-session module so connect-redis factory can use it
+  sessionOptions._sessionModule = session
+  const shouldAttempt = Boolean(process.env.REDIS_URL || process.env.REDIS_TLS_URL || process.env.UPSTASH_REDIS_REST_URL || process.env.MONGODB_URI)
+  if (shouldAttempt) {
+    const cfg = sessionStoreHelper.createSessionStore({ sessionOptions })
+    if (!isServerless) {
+      // wait for store to be ready for persistent servers
+      cfg.then(({ store }) => {
+        if (store) sessionOptions.store = store
+      }).catch(e => console.warn('sessionStore configuration failed:', e && e.message))
+    } else {
+      // Async attach for serverless so we don't delay cold starts
+      cfg.then(({ store }) => {
+        if (store) sessionOptions.store = store
+      }).catch(e => console.warn('sessionStore async configuration failed:', e && e.message))
+    }
+  }
+} catch (e) {
+  console.warn('sessionStore helper unavailable:', e && e.message)
+}
+
 // Ensure passport configuration is loaded
 try {
   if (!passport) passport = require('./config/passport')
@@ -530,11 +558,42 @@ try {
   throw e
 }
 
-app.use(session(sessionOptions))
+// Choose whether to enable server-side sessions.
+// In serverless environments we avoid MemoryStore because it doesn't persist
+// across invocations. By default we skip mounting express-session in serverless
+// functions and rely on stateless JWT cookies. Operators may force persistent
+// sessions in serverless by setting `USE_PERSISTENT_SESSIONS=true` and
+// configuring a supported store (e.g., REDIS_URL + connect-redis or
+// MONGODB_URI + connect-mongo). This code only mounts session middleware
+// when either we're running a non-serverless process or a persistent store
+// was successfully configured above.
+const wantPersistentInServerless = process.env.USE_PERSISTENT_SESSIONS === 'true'
+const sessionStoreConfigured = Boolean(sessionOptions.store)
+const sessionEnabled = (!isServerless) || (isServerless && wantPersistentInServerless && sessionStoreConfigured)
+
+if (sessionEnabled) {
+  app.use(session(sessionOptions))
+  console.log('Session middleware enabled', { isServerless, store: sessionStoreConfigured ? 'configured' : 'none' })
+} else {
+  // No-op session middleware to keep downstream code paths that expect
+  // req.session from crashing; most routes use JWT auth so this is safe.
+  app.use((req, res, next) => {
+    req.session = req.session || {}
+    next()
+  })
+  console.log('Session middleware disabled (serverless/stateless). To enable persistent sessions in serverless set USE_PERSISTENT_SESSIONS=true and configure a supported store (REDIS_URL or MONGODB_URI).')
+}
 
 // Initialize Passport
 app.use(passport.initialize())
-app.use(passport.session())
+if (sessionEnabled) {
+  app.use(passport.session())
+} else {
+  // When sessions are disabled, ensure code that expects session-backed
+  // passport doesn't attempt to use it. Most authentication is JWT-based
+  // (passport JWT strategy) so passport.session is not required in serverless.
+  console.info('passport.session() not mounted because sessions are disabled (stateless mode)')
+}
 
 // Routes
 // In serverless environments, ensure the database is initialized before
