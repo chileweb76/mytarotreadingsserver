@@ -542,7 +542,8 @@ router.post('/:id/image', passport.authenticate('jwt', { session: false }), uplo
       return res.status(403).json({ error: 'Not authorized to upload image for this reading' })
     }
 
-    const webPath = `${req.protocol}://${req.get('host')}/uploads/readings/${req.file.filename}`
+  const { buildServerBase } = require('../utils/serverBase')
+  const webPath = `${buildServerBase(req)}/uploads/readings/${req.file.filename}`
     reading.image = webPath
     await reading.save()
     res.json({ success: true, image: webPath })

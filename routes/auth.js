@@ -101,17 +101,7 @@ function absolutizeUploadUrl(url, req) {
   return url
 }
 
-// Build a reliable server base URL for links sent via email.
-// Prefer `process.env.SERVER_URL` when configured (recommended for deployments),
-// otherwise infer from the incoming request and honor `X-Forwarded-Proto`.
-function buildServerBase(req) {
-  if (process.env.SERVER_URL && process.env.SERVER_URL.trim()) {
-    return process.env.SERVER_URL.trim().replace(/\/$/, '')
-  }
-  const proto = (req && req.headers && (req.headers['x-forwarded-proto'] || req.headers['x-forwarded-protocol'])) || req.protocol || 'https'
-  const host = (req && req.get && req.get('host')) || ''
-  return `${proto}://${host}`.replace(/\/$/, '')
-}
+const { buildServerBase } = require('../utils/serverBase')
 
 // Register new user
 router.post('/register', async (req, res) => {

@@ -36,7 +36,8 @@ router.post('/:deckId/card/:cardName/upload', upload.single('card'), async (req,
       return res.status(403).json({ error: 'Rider-Waite Tarot cards cannot be edited' })
     }
 
-    const webPath = `${req.protocol}://${req.get('host')}/uploads/decks/${deckId}/${req.file.filename}`
+  const { buildServerBase } = require('../utils/serverBase')
+  const webPath = `${buildServerBase(req)}/uploads/decks/${deckId}/${req.file.filename}`
 
     // find matching card by name (case-insensitive) and update image
     const card = deck.cards.find(c => (c.name || '').toLowerCase() === (cardName || '').toLowerCase())
@@ -71,7 +72,8 @@ router.post('/:deckId/upload', upload.single('image'), async (req, res) => {
       return res.status(403).json({ error: 'Rider-Waite Tarot cards cannot be edited' })
     }
 
-    const webPath = `${req.protocol}://${req.get('host')}/uploads/decks/${deckId}/${req.file.filename}`
+  const { buildServerBase } = require('../utils/serverBase')
+  const webPath = `${buildServerBase(req)}/uploads/decks/${deckId}/${req.file.filename}`
     
     if (cardName) {
       // This is a card upload

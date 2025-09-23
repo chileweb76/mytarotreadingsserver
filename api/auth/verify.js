@@ -60,7 +60,8 @@ module.exports = (req, res) => {
     // avoids doing DB work in the edge wrapper which can sometimes time out.
     if (req.method === 'GET') {
       const token = (req.query && req.query.token) || ''
-      const redirectBase = process.env.CLIENT_URL || `${req.protocol}://${req.get('host')}`
+      const { buildServerBase } = require('../../utils/serverBase')
+      const redirectBase = process.env.CLIENT_URL || buildServerBase(req)
       const target = `${redirectBase.replace(/\/$/, '')}/auth/verify?token=${encodeURIComponent(token)}`
       res.writeHead(302, { Location: target })
       return res.end()
