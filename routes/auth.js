@@ -176,7 +176,7 @@ router.post('/register', async (req, res) => {
       // Attempt to send the verification email and await a short timeout so
       // serverless functions don't terminate before the request is dispatched.
       try {
-        await withTimeout(fetch('https://api.courier.com/send', {
+        const resp = await withTimeout(fetch('https://api.courier.com/send', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -184,7 +184,14 @@ router.post('/register', async (req, res) => {
           },
           body: JSON.stringify(payload)
         }), 3000, 'courier.send timeout')
-        console.info('Verification email scheduled/sent to Courier for', email)
+
+        if (!resp || !resp.ok) {
+          let text = ''
+          try { text = await resp.text() } catch (e) { text = String(e) }
+          console.error('Courier send returned non-OK during registration:', resp && resp.status, text)
+        } else {
+          console.info('Verification email scheduled/sent to Courier for', email)
+        }
       } catch (err) {
         // Log the error so we can see why sends fail in server logs.
         console.error('Failed to send verification email during registration:', err && err.stack ? err.stack : err)
@@ -304,7 +311,7 @@ router.post('/resend', async (req, res) => {
 
   try { require('../utils/log').debug('Scheduling resend verification email (token redacted):', { to: email, template: courierTemplateId }) } catch (e) {}
   try {
-    await withTimeout(fetch('https://api.courier.com/send', {
+    const resp = await withTimeout(fetch('https://api.courier.com/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -312,7 +319,14 @@ router.post('/resend', async (req, res) => {
       },
       body: JSON.stringify(payload)
     }), 3000, 'courier.send timeout')
-    console.info('Resend verification email sent for', email)
+
+    if (!resp || !resp.ok) {
+      let text = ''
+      try { text = await resp.text() } catch (e) { text = String(e) }
+      console.error('Courier send returned non-OK during resend:', resp && resp.status, text)
+    } else {
+      console.info('Resend verification email sent for', email)
+    }
   } catch (err) {
     console.error('Failed to resend verification email:', err && err.stack ? err.stack : err)
   }
