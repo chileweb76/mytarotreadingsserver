@@ -1,0 +1,82 @@
+// Specific serverless function for /api/readings/:id routes
+// Handles GET /api/readings/:id, PUT /api/readings/:id, and DELETE /api/readings/:id with proper CORS preflight
+
+const app = require('../../index')
+
+function normalizeOrigin(raw) {
+	if (!raw) return null
+	const trimmed = ('' + raw).trim()
+	if (!trimmed) return null
+	if (trimmed.includes(',')) return trimmed.split(',').map(s => normalizeOrigin(s)).filter(Boolean)
+	if (/^https?:\/\//i.test(trimmed)) return trimmed.replace(/\/$/, '')
+	return `https://${trimmed.replace(/\/$/, '')}`
+}
+
+function hostnameOf(urlOrHost) {
+	if (!urlOrHost) return null
+	try {
+		const u = new URL(urlOrHost)
+		return (u.hostname || '').replace(/^www\./i, '').toLowerCase()
+	} catch (e) {
+		return String(urlOrHost).replace(/^www\./i, '').toLowerCase()
+	}
+}
+
+const { allowedOrigins, allowedHostnames } = require('../../utils/corsConfig')
+
+module.exports = (req, res) => {
+	// Handle CORS preflight for the specific readings/:id route
+	if (req.method === 'OPTIONS') {
+		const origin = req.headers.origin
+		if (!origin) {
+			res.statusCode = 204
+			res.end()
+			return
+		}
+
+		// exact origin match
+		if (allowedOrigins.indexOf(origin) !== -1) {
+			res.setHeader('Access-Control-Allow-Origin', origin)
+		} else {
+			// try hostname match
+			let incomingHost
+			try {
+				incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
+			} catch (e) {
+				res.statusCode = 403
+				res.end('Forbidden')
+				return
+			}
+			if (allowedHostnames.indexOf(incomingHost) !== -1) {
+				res.setHeader('Access-Control-Allow-Origin', origin)
+			} else if (incomingHost && incomingHost.endsWith('.vercel.app')) {
+				// Accept vercel.app subdomains pragmatically for deployed clients
+				res.setHeader('Access-Control-Allow-Origin', origin)
+			} else {
+				res.statusCode = 403
+				res.end('Forbidden')
+				return
+			}
+		}
+
+		res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+		res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
+		res.setHeader('Access-Control-Allow-Credentials', 'true')
+		try { res.setHeader('Vary', 'Origin') } catch (e) {}
+		res.setHeader('Access-Control-Max-Age', '3600')
+		res.statusCode = 204
+		res.end()
+		return
+	}
+
+	try {
+		// Ensure the URL starts with /api for Express routing
+		if (!req.url.startsWith('/api')) {
+			req.url = `/api/readings/${req.query.id || ''}`
+		}
+	} catch (e) {
+		// ignore and proceed
+	}
+
+	return app(req, res)
+}
