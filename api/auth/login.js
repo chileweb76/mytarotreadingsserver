@@ -59,8 +59,11 @@ module.exports = (req, res) => {
     }
 
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'content-type')
-    res.setHeader('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+  // Cache preflight for 1 hour where appropriate
+  res.setHeader('Access-Control-Max-Age', '3600')
     // short-circuit preflight with no body
     res.status(204).end()
     return

@@ -333,15 +333,18 @@ router.post('/reset', async (req, res) => {
 // Login user
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { email, password } = req.body || {}
 
     // Validation
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' })
     }
 
-    // Find user
-    const user = await User.findOne({ email })
+    // Normalize email input
+    const normalizedEmail = (email || '').toString().trim().toLowerCase()
+
+    // Find user by normalized email
+    const user = await User.findOne({ email: normalizedEmail })
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' })
     }
@@ -351,7 +354,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Please sign in with Google' })
     }
 
-    // Check password
+    // Check password using model helper
     const isPasswordValid = await user.comparePassword(password)
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid email or password' })
@@ -369,30 +372,53 @@ router.post('/login', async (req, res) => {
 
     // Update last login
     user.lastLoginAt = new Date()
+
+    // Generate tokens
+    // Ensure JWT_SECRET is present
+    if (!process.env.JWT_SECRET) {
+      console.error('Missing JWT_SECRET environment variable')
+      return res.status(500).json({ error: 'Server misconfiguration' })
+    }
+
+    const token = generateToken(user._id)
+    const refreshToken = generateRefreshToken()
+    user.refreshToken = refreshToken
     await user.save()
 
-    // Generate token
-    const token = generateToken(user._id)
-      // issue refresh token and persist
-      const refreshToken = generateRefreshToken()
-      user.refreshToken = refreshToken
-      await user.save()
+    // Cookie options
+    const isProd = process.env.NODE_ENV === 'production'
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProd, // secure in production
+      sameSite: 'none', // allow cross-site cookies when front-end is on different origin
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    }
 
-      res.json({
-        message: 'Login successful',
-        token,
-        refreshToken,
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          authProvider: user.authProvider,
-          profilePicture: absolutizeUploadUrl(user.profilePicture, req),
-          profilePictureSmall: absolutizeUploadUrl(user.profilePictureSmall, req),
-          profilePictureThumb: absolutizeUploadUrl(user.profilePictureThumb, req),
-          readingsCount: user.readingsCount
-        }
-      })
+    try {
+      // Set token and refreshToken as httpOnly cookies for browsers that use credentials
+      res.cookie('token', token, cookieOptions)
+      // refresh token longer lived
+      res.cookie('refreshToken', refreshToken, Object.assign({}, cookieOptions, { maxAge: 30 * 24 * 60 * 60 * 1000 }))
+    } catch (e) {
+      console.warn('Failed to set cookies on login response:', e)
+    }
+
+    // Return JSON payload for API clients (keeps backward compatibility)
+    res.json({
+      message: 'Login successful',
+      token,
+      refreshToken,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        authProvider: user.authProvider,
+        profilePicture: absolutizeUploadUrl(user.profilePicture, req),
+        profilePictureSmall: absolutizeUploadUrl(user.profilePictureSmall, req),
+        profilePictureThumb: absolutizeUploadUrl(user.profilePictureThumb, req),
+        readingsCount: user.readingsCount
+      }
+    })
   } catch (error) {
     console.error('Login error:', error)
     res.status(500).json({ error: 'Internal server error' })

@@ -146,20 +146,36 @@ async function runOptionalSeeding() {
   }
 }
 
-// Initialize DB connection and optional seeding. In serverless environments
-// we avoid exiting the process on failure and skip long-running tasks.
-;(async () => {
+// Initialize DB connection once in non-serverless or when explicitly requested
+// In serverless we avoid eagerly connecting at module load to keep cold-start
+// times low. Instead, handlers may call `ensureDatabase()` to initialize.
+let _dbInitialized = false
+async function ensureDatabase() {
+  if (_dbInitialized) return
   try {
+    // disable mongoose buffering to avoid queuing operations while cold
+    // starting; driver operations should fail fast instead of being buffered
+    if (mongoose && typeof mongoose.set === 'function') {
+      mongoose.set('bufferCommands', false)
+    }
+
     await connectToDatabase()
-    console.log('✅ Connected to MongoDB Atlas')
+    _dbInitialized = true
+    console.log('✅ Connected to MongoDB Atlas (ensureDatabase)')
     if (!isServerless || process.env.RUN_SEEDS === 'true') {
       await runOptionalSeeding()
     }
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error)
+    console.error('❌ MongoDB connection error (ensureDatabase):', error)
+    // don't crash in serverless; let handlers surface the error
     if (!isServerless) process.exit(1)
   }
-})()
+}
+
+// Eagerly initialize when not running serverless (e.g. local dev)
+if (!isServerless) {
+  ensureDatabase()
+}
 
 // Middleware
 // CORS configuration - allow a single origin or a comma-separated list.
@@ -222,7 +238,12 @@ const corsOptions = {
     console.warn('CORS blocked origin', origin, { allowedOrigins, allowedHostnames })
     return callback(new Error('CORS policy: Origin not allowed'), false)
   },
-  credentials: true
+  // Allow cookies to be sent cross-site and expose useful headers
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Length', 'X-Request-Id'],
+  optionsSuccessStatus: 204
 }
 
 app.use(cors(corsOptions))
@@ -252,9 +273,26 @@ let mongoStoreAvailable = false
 if (process.env.MONGODB_URI) {
   try {
     // connect-mongo v4 exports a `create` factory
+    // Prefer using the existing mongoose client via a clientPromise so we
+    // don't open an extra connection in serverless environments. We pass a
+    // promise that resolves after `connectToDatabase()` completes and the
+    // mongoose connection's underlying MongoClient is available.
     const MongoStore = require('connect-mongo')
     if (MongoStore && typeof MongoStore.create === 'function') {
-      sessionOptions.store = MongoStore.create({ mongoUrl: process.env.MONGODB_URI })
+      const clientPromise = (async () => {
+        try {
+          await connectToDatabase()
+          // mongoose.connection.client is the native MongoClient instance
+          return mongoose.connection.getClient ? mongoose.connection.getClient() : (mongoose.connection && mongoose.connection.client)
+        } catch (e) {
+          console.warn('connect-mongo: failed to obtain mongoose client, falling back to mongoUrl:', e)
+          return null
+        }
+      })()
+
+      // If clientPromise resolves to null, connect-mongo will throw — in that
+      // case we fall back to mongoUrl to at least provide session persistence.
+      sessionOptions.store = MongoStore.create({ clientPromise, mongoUrl: process.env.MONGODB_URI })
       mongoStoreAvailable = true
     }
   } catch (e) {
@@ -274,6 +312,24 @@ app.use(passport.initialize())
 app.use(passport.session())
 
 // Routes
+// In serverless environments, ensure the database is initialized before
+// handling API requests. This middleware avoids surprising Mongoose buffering
+// behavior and surfaces DB initialization errors early. We skip OPTIONS
+// preflight requests to keep CORS fast.
+if (isServerless) {
+  app.use('/api', async (req, res, next) => {
+    if (req.method === 'OPTIONS') return next()
+    try {
+      await ensureDatabase()
+      return next()
+    } catch (err) {
+      console.error('ensureDatabase middleware error:', err)
+      // 503 indicates a temporary unavailable dependency (DB)
+      return res.status(503).json({ error: 'Database unavailable' })
+    }
+  })
+}
+
 app.use('/api/auth', require('./routes/auth'))
 app.use('/api/readings', require('./routes/readings'))
 app.use('/api/querents', require('./routes/querents'))
