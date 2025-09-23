@@ -28,6 +28,25 @@ async function connectToDatabase() {
         console.log(`mongo: connecting attempt ${attempt}/${maxAttempts} (serverSelectionTimeoutMS=${opts.serverSelectionTimeoutMS})`)
         const conn = await mongoose.connect(uri, opts)
         console.log('mongo: connected')
+
+        // Try to attach Vercel's database pool manager if available.
+        // Require at runtime to avoid build-time errors outside Vercel.
+        try {
+          // eslint-disable-next-line global-require
+          const { attachDatabasePool } = require('@vercel/functions')
+          if (attachDatabasePool && typeof attachDatabasePool === 'function') {
+            const client = mongoose.connection && mongoose.connection.client
+            if (client) {
+              attachDatabasePool(client)
+              console.log('mongo: attached Vercel database pool')
+            } else {
+              console.warn('mongo: mongoose.connection.client not available to attach pool')
+            }
+          }
+        } catch (attachErr) {
+          // Not running on Vercel or package not present — continue without attach
+        }
+
         return conn
       } catch (err) {
         lastErr = err
