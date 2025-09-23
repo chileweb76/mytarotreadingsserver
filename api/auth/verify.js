@@ -78,8 +78,8 @@ module.exports = async (req, res) => {
     <div id="status">Please wait — this may take a few seconds.</div>
     <script>
       (async function(){
-        const token = JSON.parse(${tokenJson});
-        const clientBase = JSON.parse(${clientBaseJson});
+  const token = ${tokenJson};
+  const clientBase = ${clientBaseJson};
         try {
           const resp = await fetch('/api/auth/verify', {
             method: 'POST',
