@@ -1,13 +1,21 @@
 const mongoose = require('mongoose')
+const { Schema } = mongoose
 
-const tagSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  userId: { type: String, default: null }, // null for global tags, userId for user-created tags
-  isGlobal: { type: Boolean, default: false }, // true for global predefined tags
-  createdAt: { type: Date, default: Date.now }
+const tagSchema = new Schema({
+  name: { type: String, required: true, trim: true },
+  // normalized lowercase name for case-insensitive uniqueness
+  nameLower: { type: String, required: true, trim: true, lowercase: true },
+  // store user as ObjectId; null means a global tag
+  userId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  isGlobal: { type: Boolean, default: false }
+}, { timestamps: true })
+
+// Unique per (nameLower, userId) pair. Global tags will have userId === null.
+tagSchema.index({ nameLower: 1, userId: 1 }, { unique: true })
+
+tagSchema.pre('validate', function (next) {
+  if (this.name) this.nameLower = this.name.trim().toLowerCase()
+  next()
 })
 
-// Ensure no duplicate tags for the same user (or globally)
-tagSchema.index({ name: 1, userId: 1 }, { unique: true })
-
-module.exports = mongoose.model('Tag', tagSchema)
+module.exports = mongoose.models.Tag || mongoose.model('Tag', tagSchema)
