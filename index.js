@@ -192,23 +192,7 @@ function normalizeOrigin(raw) {
   return `https://${trimmed.replace(/\/$/, '')}`
 }
 
-const rawClient = process.env.CLIENT_URL || process.env.SERVER_URL || 'http://localhost:3000'
-const normalized = normalizeOrigin(rawClient)
-const allowedOrigins = Array.isArray(normalized) ? normalized : (normalized ? [normalized] : [])
-
-// Compute allowed hostnames (strip www and normalize) for hostname matching
-function hostnameOf(urlOrHost) {
-  if (!urlOrHost) return null
-  try {
-    const u = new URL(urlOrHost)
-    return (u.hostname || '').replace(/^www\./i, '').toLowerCase()
-  } catch (e) {
-    // value might already be a bare hostname like "example.com"
-    return String(urlOrHost).replace(/^www\./i, '').toLowerCase()
-  }
-}
-
-const allowedHostnames = allowedOrigins.map(hostnameOf).filter(Boolean)
+const { allowedOrigins, allowedHostnames } = require('./utils/corsConfig')
 
 const corsOptions = {
   origin: function (origin, callback) {

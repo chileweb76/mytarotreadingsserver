@@ -22,10 +22,7 @@ function hostnameOf(urlOrHost) {
   }
 }
 
-const rawClient = process.env.CLIENT_URL || process.env.SERVER_URL || null
-const normalized = normalizeOrigin(rawClient)
-const allowedOrigins = Array.isArray(normalized) ? normalized : (normalized ? [normalized] : [])
-const allowedHostnames = allowedOrigins.map(hostnameOf).filter(Boolean)
+const { allowedOrigins, allowedHostnames } = require('../../utils/corsConfig')
 
 module.exports = (req, res) => {
   const origin = req.headers.origin
