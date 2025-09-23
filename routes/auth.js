@@ -80,7 +80,8 @@ function absolutizeUploadUrl(url, req) {
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password, verifyPassword } = req.body
+    const { username, email: rawEmail, password, verifyPassword } = req.body
+    const email = rawEmail && rawEmail.toString().trim().toLowerCase()
 
     // Validation
     if (!username || !email || !password || !verifyPassword) {
