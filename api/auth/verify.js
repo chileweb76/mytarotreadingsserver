@@ -41,6 +41,8 @@ module.exports = async (req, res) => {
       }
       if (allowedHostnames.indexOf(incomingHost) !== -1) {
         res.setHeader('Access-Control-Allow-Origin', origin)
+      } else if (incomingHost && incomingHost.endsWith('.vercel.app')) {
+        res.setHeader('Access-Control-Allow-Origin', origin)
       } else {
         res.status(403).end('Forbidden')
         return
@@ -50,6 +52,7 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
     res.setHeader('Access-Control-Allow-Credentials', 'true')
+    try { res.setHeader('Vary', 'Origin') } catch (e) {}
     res.setHeader('Access-Control-Max-Age', '3600')
     res.status(204).end()
     return
@@ -109,6 +112,20 @@ module.exports = async (req, res) => {
     </script>
   </body>
 </html>`
+
+    // If invoked from a browser with an Origin header, echo CORS headers so
+    // the browser accepts the response. For direct email clicks there may be
+    // no Origin header and that's fine.
+    if (origin) {
+      if (allowedOrigins.indexOf(origin) !== -1) res.setHeader('Access-Control-Allow-Origin', origin)
+      else {
+        try {
+          const incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
+          if (allowedHostnames.indexOf(incomingHost) !== -1 || incomingHost.endsWith('.vercel.app')) res.setHeader('Access-Control-Allow-Origin', origin)
+        } catch (e) {}
+      }
+      try { res.setHeader('Vary', 'Origin') } catch (e) {}
+    }
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
     res.statusCode = 200

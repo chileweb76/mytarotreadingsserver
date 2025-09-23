@@ -42,6 +42,27 @@ async function probeTls(host, port = 27017, timeoutMs = 8000) {
 
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
+  // CORS preflight handling
+  const { allowedOrigins, allowedHostnames } = require('../utils/corsConfig')
+  const origin = req.headers.origin
+  if (req.method === 'OPTIONS') {
+    if (!origin) return res.status(204).end()
+    let allowOrigin = '*'
+    if (allowedOrigins.indexOf(origin) !== -1) allowOrigin = origin
+    else {
+      try {
+        const incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
+        if (allowedHostnames.indexOf(incomingHost) !== -1 || incomingHost.endsWith('.vercel.app')) allowOrigin = origin
+      } catch (e) {}
+    }
+    if (!allowOrigin) return res.status(403).end('Forbidden')
+    res.setHeader('Access-Control-Allow-Origin', allowOrigin)
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type')
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    try { res.setHeader('Vary', 'Origin') } catch (e) {}
+    return res.status(204).end()
+  }
   const uri = process.env.MONGODB_URI || '';
 
   const info = {
