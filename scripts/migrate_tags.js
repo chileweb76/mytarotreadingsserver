@@ -26,8 +26,18 @@ async function run() {
   // Use the Tag model from the server code
   const Tag = require(path.join(serverRoot, 'models', 'Tag'))
 
-  await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
-  console.log('Connected to MongoDB')
+  // Connect only if not already connected. Track whether we created the
+  // connection so we only call disconnect when appropriate (prevents
+  // accidental pool release if this module is imported into a long-running
+  // server process).
+  let createdConnection = false
+  if (!mongoose.connection || mongoose.connection.readyState === 0) {
+    await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+    createdConnection = true
+    console.log('Connected to MongoDB')
+  } else {
+    console.log('Using existing mongoose connection (no new connect)')
+  }
 
   try {
     const tags = await Tag.find({}).exec()
@@ -66,12 +76,26 @@ async function run() {
     await Tag.init()
     console.log('Indexes ensured (Tag.init completed)')
   } finally {
-    await mongoose.disconnect()
-    console.log('Disconnected')
+    if (createdConnection) {
+      try {
+        await mongoose.disconnect()
+        console.log('Disconnected')
+      } catch (e) {
+        console.warn('Failed to disconnect mongoose (ignored):', e && e.message)
+      }
+    } else {
+      console.log('Skipping mongoose.disconnect because connection was not created by this script')
+    }
   }
 }
 
-run().catch(err => {
-  console.error('Migration failed:', err)
-  process.exit(1)
-})
+// If run directly, execute the migration. If imported, provide run() to the
+// importer without triggering connect/disconnect side effects.
+if (require.main === module) {
+  run().catch(err => {
+    console.error('Migration failed:', err)
+    process.exit(1)
+  })
+}
+
+module.exports = { run }
