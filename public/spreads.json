@@ -1,0 +1,94 @@
+
+[
+	{
+		"spread": "One Card",
+		"cards": ["Card"],
+		"image": "/images/spreads/one-card.png",
+		"numberofCards": 1
+	},
+    {
+        "spread": "Two Card (Situation/Advice)",
+        "cards": ["Situation", "Advice"],
+        "image": "/images/spreads/two-cardsa.png",
+        "numberofCards": 2	
+    },
+    {
+        "spread": "Two Card (Pros/Cons)",
+        "cards": ["Pros", "Cons"],
+        "image": "/images/spreads/two-cardspc.png",
+        "numberofCards": 2
+    },
+    {
+        "spread": "Two Card (Yes/No)",
+        "cards": ["Yes", "No"],
+        "image": "/images/spreads/two-cardsyn.png",
+        "numberofCards": 2											
+    },
+	{
+		"spread": "Three Card (Past/Present/Future)",
+		"cards": ["Past", "Present", "Future"],
+		"image": "/images/spreads/three-cardppf.png",
+		"numberofCards": 3
+	},
+    {
+		"spread": "Three Card (Within, Without, Advice)",
+		"cards": ["Within", "Without", "Advice"],
+		"image": "/images/spreads/three-cardwwa.png",
+		"numberofCards": 3	
+	},
+    {
+		"spread": "Three Card (Body, Mind, Spirit)",
+		"cards": ["Body", "Mind", "Spirit"],
+		"image": "/images/spreads/three-cardbms.png",
+		"numberofCards": 3
+	},
+    {
+		"spread": "Three Card (Energy, Obstacle, Advice)",
+		"cards": ["Energy", "Obstacle", "Advice"],
+		"image": "/images/spreads/three-cardeoa.png",
+		"numberofCards": 3			
+	},
+    {
+		"spread": "Four Card Guidance",
+		"cards": ["Heart of Issue", "Internal Influences", "External Influences", "Key to a Favorable Outcome"],
+		"image": "/images/spreads/four-card-guidance.png",
+		"numberofCards": 4
+	},
+	{
+		"spread": "Celtic Cross",
+		"cards": [
+			"Significator",
+			"Crossing",
+			"Foundation",
+			"Recent Past",
+			"Crowning",
+			"Near Future",
+			"Self",
+			"Environment",
+			"Hopes/Fears",
+			"Outcome"
+		],
+		"image": "/images/spreads/celtic-cross.png",
+		"numberofCards": 10
+	},
+	{
+		"spread": "Horseshoe",
+		"cards": [
+			"Past",
+			"Present",
+			"Hidden Influences",
+			"Obstacle",
+			"External Influences",
+			"Best Course of Action",
+			"Outcome"
+		],
+		"image": "/images/spreads/horseshoe.png",
+		"numberofCards": 7
+	},
+	{
+		"spread": "Relationship Five",
+		"cards": ["You", "Partner", "Strengths", "Weaknesses", "Outcome"],
+		"image": "/images/spreads/relationship-five.png",
+		"numberofCards": 5
+	}
+]

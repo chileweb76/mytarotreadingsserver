@@ -19,6 +19,15 @@ async function connectToDatabase() {
     connectTimeoutMS: Number(process.env.MONGO_CONNECT_TIMEOUT_MS) || 8000
   }
 
+  // Allow overriding the database name via environment var. If the
+  // connection URI already contains a database path, that takes
+  // precedence. Setting `dbName` ensures mongoose connects to the
+  // intended database instead of defaulting to 'test'.
+  if (process.env.MONGODB_DB_NAME) {
+    opts.dbName = process.env.MONGODB_DB_NAME
+    console.log('mongo: using database name from MONGODB_DB_NAME=', opts.dbName)
+  }
+
   const maxAttempts = Number(process.env.MONGO_CONNECT_RETRIES) || 3
 
   global._mongoConnectPromise = (async () => {
@@ -27,7 +36,7 @@ async function connectToDatabase() {
       try {
         console.log(`mongo: connecting attempt ${attempt}/${maxAttempts} (serverSelectionTimeoutMS=${opts.serverSelectionTimeoutMS})`)
         const conn = await mongoose.connect(uri, opts)
-        console.log('mongo: connected')
+  console.log('mongo: connected')
 
         // Try to attach Vercel's database pool manager if available.
         // Require at runtime to avoid build-time errors outside Vercel.
