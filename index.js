@@ -610,8 +610,35 @@ app.get('/', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack)
-  res.status(500).json({ error: 'Something went wrong!' })
+  try {
+    // Basic stack log
+    console.error('Unhandled error:', err && err.stack ? err.stack : err)
+
+    const verbose = process.env.ENABLE_VERBOSE_ERRORS === 'true' || process.env.NODE_ENV !== 'production'
+
+    if (verbose) {
+      // Log limited request context (avoid secrets)
+      try {
+        console.error('Request context for error:', {
+          method: req && req.method,
+          url: req && req.originalUrl,
+          origin: req && req.headers && req.headers.origin,
+          contentType: req && req.headers && req.headers['content-type'],
+          // only log body keys to avoid leaking sensitive values
+          bodyKeys: req && req.body ? Object.keys(req.body) : undefined
+        })
+      } catch (e) {
+        // ignore
+      }
+      return res.status(500).json({ error: 'Something went wrong!', details: err && err.message ? err.message : String(err) })
+    }
+
+    res.status(500).json({ error: 'Something went wrong!' })
+  } catch (outer) {
+    // If the error handler itself throws, fallback to minimal response
+    console.error('Error handler failed:', outer)
+    try { res.status(500).json({ error: 'Something went wrong!' }) } catch (e) {}
+  }
 })
 
 // 404 handler
