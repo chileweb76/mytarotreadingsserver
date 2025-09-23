@@ -172,23 +172,23 @@ router.post('/register', async (req, res) => {
         }
       }
 
-  try { require('../utils/log').debug('Scheduling verification email to Courier (token redacted):', { to: email, template: courierTemplateId }) } catch (e) {}
-      // fire-and-forget but catch/log errors
-      (async () => {
-        try {
-          await withTimeout(fetch('https://api.courier.com/send', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
-            },
-            body: JSON.stringify(payload)
-          }), 7000, 'courier.send timeout')
-          console.info('Verification email scheduled/sent to Courier for', email)
-        } catch (err) {
-          console.error('Failed to send verification email (background):', err)
-        }
-      })()
+      try { require('../utils/log').debug('Scheduling verification email to Courier (token redacted):', { to: email, template: courierTemplateId }) } catch (e) {}
+      // Attempt to send the verification email and await a short timeout so
+      // serverless functions don't terminate before the request is dispatched.
+      try {
+        await withTimeout(fetch('https://api.courier.com/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
+          },
+          body: JSON.stringify(payload)
+        }), 3000, 'courier.send timeout')
+        console.info('Verification email scheduled/sent to Courier for', email)
+      } catch (err) {
+        // Log the error so we can see why sends fail in server logs.
+        console.error('Failed to send verification email during registration:', err && err.stack ? err.stack : err)
+      }
     }
 
     // Do NOT issue JWT until email is verified
@@ -302,22 +302,20 @@ router.post('/resend', async (req, res) => {
         }
       }
 
-  try { require('../utils/log').debug('Scheduling resend verification email (background, token redacted):', { to: email, template: courierTemplateId }) } catch (e) {}
-      (async () => {
-        try {
-          await withTimeout(fetch('https://api.courier.com/send', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
-            },
-            body: JSON.stringify(payload)
-          }), 7000, 'courier.send timeout')
-          console.info('Resend verification email sent for', email)
-        } catch (err) {
-          console.error('Failed to resend verification email (background):', err)
-        }
-      })()
+  try { require('../utils/log').debug('Scheduling resend verification email (token redacted):', { to: email, template: courierTemplateId }) } catch (e) {}
+  try {
+    await withTimeout(fetch('https://api.courier.com/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.COURIER_AUTH_TOKEN}`
+      },
+      body: JSON.stringify(payload)
+    }), 3000, 'courier.send timeout')
+    console.info('Resend verification email sent for', email)
+  } catch (err) {
+    console.error('Failed to resend verification email:', err && err.stack ? err.stack : err)
+  }
     }
 
     // Echo CORS when present so client accepts response
