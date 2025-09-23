@@ -39,8 +39,16 @@ router.get('/', async (req, res) => {
 // Get spread by id
 router.get('/:id', async (req, res) => {
   try {
+    // Debug: log incoming request for troubleshooting 404s seen in production
+    try {
+      console.debug('spreads: GET /api/spreads/:id called', { id: req.params.id, url: req && req.originalUrl, origin: req && req.headers && req.headers.origin })
+    } catch (e) {}
     const spread = await Spread.findById(req.params.id)
-    if (!spread) return res.status(404).json({ error: 'Spread not found' })
+    if (!spread) {
+      try { console.debug('spreads: findById returned null for id', req.params.id) } catch (e) {}
+      return res.status(404).json({ error: 'Spread not found' })
+    }
+    try { console.debug('spreads: found spread', { id: spread._id }) } catch (e) {}
     res.json(spread)
   } catch (err) {
     console.error('Error fetching spread', err)
