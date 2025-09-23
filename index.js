@@ -254,19 +254,17 @@ const sessionOptions = {
 }
 
 let mongoStoreAvailable = false
-if (process.env.MONGODB_URI) {
+// In serverless environments, avoid initializing connect-mongo at module load
+// time because it may await DB clients and contribute to cold-start latency.
+// We'll fall back to MemoryStore in serverless. In persistent servers we
+// continue to prefer connect-mongo for session persistence.
+if (!isServerless && process.env.MONGODB_URI) {
   try {
-    // connect-mongo v4 exports a `create` factory
-    // Prefer using the existing mongoose client via a clientPromise so we
-    // don't open an extra connection in serverless environments. We pass a
-    // promise that resolves after `connectToDatabase()` completes and the
-    // mongoose connection's underlying MongoClient is available.
     const MongoStore = require('connect-mongo')
     if (MongoStore && typeof MongoStore.create === 'function') {
       const clientPromise = (async () => {
         try {
           await connectToDatabase()
-          // mongoose.connection.client is the native MongoClient instance
           return mongoose.connection.getClient ? mongoose.connection.getClient() : (mongoose.connection && mongoose.connection.client)
         } catch (e) {
           console.warn('connect-mongo: failed to obtain mongoose client, falling back to mongoUrl:', e)
@@ -274,15 +272,18 @@ if (process.env.MONGODB_URI) {
         }
       })()
 
-      // If clientPromise resolves to null, connect-mongo will throw — in that
-      // case we fall back to mongoUrl to at least provide session persistence.
       sessionOptions.store = MongoStore.create({ clientPromise, mongoUrl: process.env.MONGODB_URI })
       mongoStoreAvailable = true
     }
   } catch (e) {
-    // connect-mongo not installed or failed - we'll fall back and warn
     console.warn('connect-mongo not available - using default MemoryStore. Install connect-mongo for production sessions.')
   }
+} else if (isServerless) {
+  // Running serverless: do not configure a persistent session store here to
+  // avoid unnecessary DB coupling during cold starts. MemoryStore will be used
+  // (not ideal for production, but acceptable in serverless functions that
+  // primarily use JWTs for auth). Log for visibility.
+  console.log('Serverless runtime detected: skipping connect-mongo session store initialization')
 }
 
 if (!mongoStoreAvailable && process.env.NODE_ENV === 'production') {
