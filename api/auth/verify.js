@@ -1,6 +1,9 @@
 // Serverless entry for /api/auth/verify to ensure OPTIONS preflight and
 // proper CORS headers are present for browser flows. For direct clicks
-// (no Origin header) this forwards the GET to the Express app unchanged.
+// (no Origin header) this serves a small HTML page that will POST the token
+// to the API's POST /api/auth/verify endpoint from the browser. This avoids
+// redirecting users to a client route that may not exist and gives immediate
+// feedback while the serverless function does the DB work.
 
 const app = require('../../index')
 
@@ -16,58 +19,53 @@ function hostnameOf(urlOrHost) {
   }
 }
 
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   const origin = req.headers.origin
-  module.exports = async (req, res) => {
-    const origin = req.headers.origin
 
-    // Handle preflight OPTIONS
-    if (req.method === 'OPTIONS') {
-      if (!origin) {
-        res.status(204).end()
-        return
-      }
-
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        res.setHeader('Access-Control-Allow-Origin', origin)
-      } else {
-        let incomingHost
-        try {
-          incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
-        } catch (e) {
-          res.status(403).end('Forbidden')
-          return
-        }
-        if (allowedHostnames.indexOf(incomingHost) !== -1) {
-          res.setHeader('Access-Control-Allow-Origin', origin)
-        } else {
-          res.status(403).end('Forbidden')
-          return
-        }
-      }
-
-      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
-      res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
-      res.setHeader('Access-Control-Allow-Credentials', 'true')
-      res.setHeader('Access-Control-Max-Age', '3600')
+  // Handle preflight OPTIONS
+  if (req.method === 'OPTIONS') {
+    if (!origin) {
       res.status(204).end()
       return
     }
 
-    // For GET requests invoked from email links, forward to the Express app
-    // so the API's verification logic runs server-side and can return the
-    // appropriate redirect or JSON response. This avoids sending users to a
-    // client page that may not exist and makes email clicks verify directly.
-    if (req.method === 'GET') {
-      // Serve a small HTML page that will POST the token to the API's POST
-      // /api/auth/verify endpoint from the browser. This avoids redirecting
-      // users to a client route that may not exist and gives immediate
-      // feedback while the serverless function does the DB work.
-      const token = (req.query && req.query.token) || ''
-      const clientBase = (process.env.CLIENT_URL || '').replace(/\/$/, '')
-      const tokenJson = JSON.stringify(token)
-      const clientBaseJson = JSON.stringify(clientBase)
-      const html = `<!doctype html>
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      res.setHeader('Access-Control-Allow-Origin', origin)
+    } else {
+      let incomingHost
+      try {
+        incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
+      } catch (e) {
+        res.status(403).end('Forbidden')
+        return
+      }
+      if (allowedHostnames.indexOf(incomingHost) !== -1) {
+        res.setHeader('Access-Control-Allow-Origin', origin)
+      } else {
+        res.status(403).end('Forbidden')
+        return
+      }
+    }
+
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Access-Control-Max-Age', '3600')
+    res.status(204).end()
+    return
+  }
+
+  // For GET requests invoked from email links, serve a small HTML page that
+  // will POST the token to the API's POST /api/auth/verify endpoint from the
+  // browser. This avoids redirecting users to a client route that may not
+  // exist and gives immediate feedback while the serverless function does
+  // the DB work.
+  if (req.method === 'GET') {
+    const token = (req.query && req.query.token) || ''
+    const clientBase = (process.env.CLIENT_URL || '').replace(/\/$/, '')
+    const tokenJson = JSON.stringify(token)
+    const clientBaseJson = JSON.stringify(clientBase)
+    const html = `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -112,16 +110,15 @@ module.exports = (req, res) => {
   </body>
 </html>`
 
-      res.setHeader('Content-Type', 'text/html; charset=utf-8')
-      res.statusCode = 200
-      res.end(html)
-      return
-    }
-
-    // Fallback: forward to Express app for anything else (including POST)
-    try {
-      if (!req.url.startsWith('/api')) req.url = `/api${req.url}`
-    } catch (e) {}
-    return app(req, res)
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.statusCode = 200
+    res.end(html)
+    return
   }
+
+  // Fallback: forward to Express app for anything else (including POST)
+  try {
+    if (!req.url.startsWith('/api')) req.url = `/api${req.url}`
+  } catch (e) {}
+  return app(req, res)
 }
