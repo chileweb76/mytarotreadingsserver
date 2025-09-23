@@ -7,9 +7,12 @@ const path = require('path')
 // project root picks up the server env values reliably.
 dotenv.config({ path: path.resolve(__dirname, '.env') })
 
-const mongoose = require('mongoose')
-const session = require('express-session')
-const passport = require('./config/passport')
+// Defer heavy imports (mongoose, session, passport) until after the
+// lightweight early middleware so preflight OPTIONS can be answered quickly
+// in serverless environments.
+let mongoose
+let session
+let passport
 
 const app = express()
 
@@ -155,6 +158,8 @@ async function ensureDatabase() {
   try {
     // disable mongoose buffering to avoid queuing operations while cold
     // starting; driver operations should fail fast instead of being buffered
+    // require mongoose lazily to avoid module-load cost during preflight
+    if (!mongoose) mongoose = require('mongoose')
     if (mongoose && typeof mongoose.set === 'function') {
       mongoose.set('bufferCommands', false)
     }
@@ -210,6 +215,56 @@ if (process.env.NODE_ENV !== 'production') {
   const local = normalizeOrigin('http://localhost:3000')
   if (local && allowedOrigins.indexOf(local) === -1) allowedOrigins.push(local)
 }
+
+// Early lightweight OPTIONS responder: answer CORS preflight quickly without
+// loading heavier middleware (passport, session, DB). This reduces serverless
+// cold-start timeouts for preflight requests. It echoes allowed origins so
+// credentialed requests can succeed when the origin is recognized.
+app.use((req, res, next) => {
+  if (!req || req.method !== 'OPTIONS') return next()
+  const origin = req.headers.origin
+  let allowOrigin = '*'
+  try {
+    if (origin && allowedOrigins && allowedOrigins.indexOf(origin) !== -1) {
+      allowOrigin = origin
+    } else if (process.env.NODE_ENV !== 'production' && origin) {
+      // allow local origins in development to make testing easier
+      allowOrigin = origin
+    }
+  } catch (e) {
+    // fallback to wildcard
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', allowOrigin)
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Access-Control-Max-Age', '3600')
+  return res.status(204).end()
+})
+
+// Targeted fast responder for auth-related preflight requests. Some routes
+// (like /api/auth/verify) may be backed by heavier initialization in their
+// module scope; having an explicit handler here ensures we short-circuit
+// and answer OPTIONS quickly.
+app.options('/api/auth/*', (req, res) => {
+  const origin = req.headers.origin
+  let allowOrigin = '*'
+  try {
+    if (origin && allowedOrigins && allowedOrigins.indexOf(origin) !== -1) {
+      allowOrigin = origin
+    } else if (process.env.NODE_ENV !== 'production' && origin) {
+      allowOrigin = origin
+    }
+  } catch (e) {}
+
+  res.setHeader('Access-Control-Allow-Origin', allowOrigin)
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Access-Control-Max-Age', '3600')
+  return res.status(204).end()
+})
 
 const corsOptions = {
   origin: function (origin, callback) {
