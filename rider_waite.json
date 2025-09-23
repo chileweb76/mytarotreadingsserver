@@ -1,0 +1,320 @@
+{
+  "deckName": "Rider-Waite Tarot Deck",
+  "description": "The Rider-Waite Tarot deck, also known as the Rider-Waite-Smith deck, is one of the most popular tarot decks in use today. Created by Arthur Edward Waite and illustrated by Pamela Colman Smith, it was first published in 1909. This deck is renowned for its detailed symbolic imagery and accessibility, making it an ideal choice for both beginners and experienced readers. The 78-card deck includes 22 Major Arcana cards representing life's major spiritual lessons and 56 Minor Arcana cards representing day-to-day experiences.",
+  "owner": null,
+  "image": "/images/rider-waite-tarot/cover.jpg",
+  "cards": [
+    {
+      "name": "The Fool",
+      "image": "/images/rider-waite-tarot/major_arcana_fool.png"
+    },
+    {
+      "name": "The Magician",
+      "image": "/images/rider-waite-tarot/major_arcana_magician.png"
+    },
+    {
+      "name": "The High Priestess",
+      "image": "/images/rider-waite-tarot/major_arcana_priestess.png"
+    },
+    {
+      "name": "The Empress",
+      "image": "/images/rider-waite-tarot/major_arcana_empress.png"
+    },
+    {
+      "name": "The Emperor",
+      "image": "/images/rider-waite-tarot/major_arcana_emperor.png"
+    },
+    {
+      "name": "The Hierophant",
+      "image": "/images/rider-waite-tarot/major_arcana_hierophant.png"
+    },
+    {
+      "name": "The Lovers",
+      "image": "/images/rider-waite-tarot/major_arcana_lovers.png"
+    },
+    {
+      "name": "The Chariot",
+      "image": "/images/rider-waite-tarot/major_arcana_chariot.png"
+    },
+    {
+      "name": "Strength",
+      "image": "/images/rider-waite-tarot/major_arcana_strength.png"
+    },
+    {
+      "name": "The Hermit",
+      "image": "/images/rider-waite-tarot/major_arcana_hermit.png"
+    },
+    {
+      "name": "Wheel of Fortune",
+      "image": "/images/rider-waite-tarot/major_arcana_fortune.png"
+    },
+    {
+      "name": "Justice",
+      "image": "/images/rider-waite-tarot/major_arcana_justice.png"
+    },
+    {
+      "name": "The Hanged Man",
+      "image": "/images/rider-waite-tarot/major_arcana_hanged.png"
+    },
+    {
+      "name": "Death",
+      "image": "/images/rider-waite-tarot/major_arcana_death.png"
+    },
+    {
+      "name": "Temperance",
+      "image": "/images/rider-waite-tarot/major_arcana_temperance.png"
+    },
+    {
+      "name": "The Devil",
+      "image": "/images/rider-waite-tarot/major_arcana_devil.png"
+    },
+    {
+      "name": "The Tower",
+      "image": "/images/rider-waite-tarot/major_arcana_tower.png"
+    },
+    {
+      "name": "The Star",
+      "image": "/images/rider-waite-tarot/major_arcana_star.png"
+    },
+    {
+      "name": "The Moon",
+      "image": "/images/rider-waite-tarot/major_arcana_moon.png"
+    },
+    {
+      "name": "The Sun",
+      "image": "/images/rider-waite-tarot/major_arcana_sun.png"
+    },
+    {
+      "name": "Judgement",
+      "image": "/images/rider-waite-tarot/major_arcana_judgement.png"
+    },
+    {
+      "name": "The World",
+      "image": "/images/rider-waite-tarot/major_arcana_world.png"
+    },
+    {
+      "name": "Ace of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_ace.png"
+    },
+    {
+      "name": "Two of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_2.png"
+    },
+    {
+      "name": "Three of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_3.png"
+    },
+    {
+      "name": "Four of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_4.png"
+    },
+    {
+      "name": "Five of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_5.png"
+    },
+    {
+      "name": "Six of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_6.png"
+    },
+    {
+      "name": "Seven of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_7.png"
+    },
+    {
+      "name": "Eight of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_8.png"
+    },
+    {
+      "name": "Nine of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_9.png"
+    },
+    {
+      "name": "Ten of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_10.png"
+    },
+    {
+      "name": "Page of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_page.png"
+    },
+    {
+      "name": "Knight of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_knight.png"
+    },
+    {
+      "name": "Queen of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_queen.png"
+    },
+    {
+      "name": "King of Wands",
+      "image": "/images/rider-waite-tarot/minor_arcana_wands_king.png"
+    },
+    {
+      "name": "Ace of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_ace.png"
+    },
+    {
+      "name": "Two of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_2.png"
+    },
+    {
+      "name": "Three of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_3.png"
+    },
+    {
+      "name": "Four of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_4.png"
+    },
+    {
+      "name": "Five of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_5.png"
+    },
+    {
+      "name": "Six of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_6.png"
+    },
+    {
+      "name": "Seven of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_7.png"
+    },
+    {
+      "name": "Eight of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_8.png"
+    },
+    {
+      "name": "Nine of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_9.png"
+    },
+    {
+      "name": "Ten of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_10.png"
+    },
+    {
+      "name": "Page of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_page.png"
+    },
+    {
+      "name": "Knight of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_knight.png"
+    },
+    {
+      "name": "Queen of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_queen.png"
+    },
+    {
+      "name": "King of Cups",
+      "image": "/images/rider-waite-tarot/minor_arcana_cups_king.png"
+    },
+    {
+      "name": "Ace of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_ace.png"
+    },
+    {
+      "name": "Two of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_2.png"
+    },
+    {
+      "name": "Three of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_3.png"
+    },
+    {
+      "name": "Four of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_4.png"
+    },
+    {
+      "name": "Five of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_5.png"
+    },
+    {
+      "name": "Six of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_6.png"
+    },
+    {
+      "name": "Seven of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_7.png"
+    },
+    {
+      "name": "Eight of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_8.png"
+    },
+    {
+      "name": "Nine of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_9.png"
+    },
+    {
+      "name": "Ten of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_10.png"
+    },
+    {
+      "name": "Page of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_page.png"
+    },
+    {
+      "name": "Knight of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_knight.png"
+    },
+    {
+      "name": "Queen of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_queen.png"
+    },
+    {
+      "name": "King of Swords",
+      "image": "/images/rider-waite-tarot/minor_arcana_swords_king.png"
+    },
+    {
+      "name": "Ace of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_ace.png"
+    },
+    {
+      "name": "Two of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_2.png"
+    },
+    {
+      "name": "Three of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_3.png"
+    },
+    {
+      "name": "Four of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_4.png"
+    },
+    {
+      "name": "Five of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_5.png"
+    },
+    {
+      "name": "Six of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_6.png"
+    },
+    {
+      "name": "Seven of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_7.png"
+    },
+    {
+      "name": "Eight of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_8.png"
+    },
+    {
+      "name": "Nine of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_9.png"
+    },
+    {
+      "name": "Ten of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_10.png"
+    },
+    {
+      "name": "Page of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_page.png"
+    },
+    {
+      "name": "Knight of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_knight.png"
+    },
+    {
+      "name": "Queen of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_queen.png"
+    },
+    {
+      "name": "King of Pentacles",
+      "image": "/images/rider-waite-tarot/minor_arcana_pentacles_king.png"
+    }
+  ]
+}
