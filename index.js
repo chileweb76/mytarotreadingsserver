@@ -373,6 +373,18 @@ app.use((req, res, next) => {
     } else if (process.env.NODE_ENV !== 'production' && origin) {
       // allow local origins in development to make testing easier
       allowOrigin = origin
+    } else if (origin) {
+      // allow Vercel-assigned subdomains (common when client and server
+      // are deployed to different Vercel projects). This is a pragmatic
+      // relaxation for deployments — only allow exact vercel.app subdomains.
+      try {
+        const incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
+        if (incomingHost && incomingHost.endsWith('.vercel.app')) {
+          allowOrigin = origin
+        }
+      } catch (e) {
+        // ignore malformed origin
+      }
     }
   } catch (e) {
     // fallback to wildcard
@@ -382,6 +394,9 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
+  // Ensure caches/proxies vary by Origin so different origins receive the
+  // correct CORS headers, and always send a header the browser can see.
+  try { res.setHeader('Vary', 'Origin') } catch (e) {}
   res.setHeader('Access-Control-Max-Age', '3600')
   return res.status(204).end()
 })
@@ -398,6 +413,13 @@ app.options('/api/auth/*', (req, res) => {
       allowOrigin = origin
     } else if (process.env.NODE_ENV !== 'production' && origin) {
       allowOrigin = origin
+    } else if (origin) {
+      try {
+        const incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
+        if (incomingHost && incomingHost.endsWith('.vercel.app')) {
+          allowOrigin = origin
+        }
+      } catch (e) {}
     }
   } catch (e) {}
 
@@ -405,6 +427,7 @@ app.options('/api/auth/*', (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
+  try { res.setHeader('Vary', 'Origin') } catch (e) {}
   res.setHeader('Access-Control-Max-Age', '3600')
   return res.status(204).end()
 })
@@ -476,6 +499,8 @@ app.use((req, res, next) => {
     try {
       const reqHost = (req.get && req.get('host')) ? req.get('host').replace(/:\d+$/, '').toLowerCase() : ''
       if (reqHost && incomingHost === reqHost) return callback(null, true)
+      // accept Vercel subdomains pragmatically (e.g., myapp.vercel.app)
+      if (incomingHost && incomingHost.endsWith('.vercel.app')) return callback(null, true)
     } catch (e) {}
 
     // Not allowed - log for debugging and return an explicit error
@@ -504,6 +529,7 @@ app.options('*', (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
+  try { res.setHeader('Vary', 'Origin') } catch (e) {}
   res.setHeader('Access-Control-Max-Age', '3600')
   return res.status(204).end()
 })

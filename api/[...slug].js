@@ -51,6 +51,9 @@ module.exports = (req, res) => {
 			}
 			if (allowedHostnames.indexOf(incomingHost) !== -1) {
 				res.setHeader('Access-Control-Allow-Origin', origin)
+			} else if (incomingHost && incomingHost.endsWith('.vercel.app')) {
+				// Accept vercel.app subdomains pragmatically for deployed clients
+				res.setHeader('Access-Control-Allow-Origin', origin)
 			} else {
 				res.statusCode = 403
 				res.end('Forbidden')
@@ -61,6 +64,7 @@ module.exports = (req, res) => {
 		res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
 		res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
 		res.setHeader('Access-Control-Allow-Credentials', 'true')
+		try { res.setHeader('Vary', 'Origin') } catch (e) {}
 		res.setHeader('Access-Control-Max-Age', '3600')
 		res.statusCode = 204
 		res.end()

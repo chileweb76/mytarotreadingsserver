@@ -10,8 +10,25 @@ router.get('/', async (req, res) => {
     const userId = req.user?.id || req.headers['x-user-id']
 
     // Build query: always include global tags, and include user's tags when we have a user
-    const query = userId
-      ? { $or: [ { isGlobal: true, userId: null }, { userId: mongoose.Types.ObjectId(userId) } ] }
+    let parsedUserId = null
+    try {
+      if (userId && mongoose && mongoose.Types && typeof mongoose.Types.ObjectId === 'function' && mongoose.Types.ObjectId.isValid && mongoose.Types.ObjectId.isValid(userId)) {
+        // Use `new` to construct an ObjectId instance where supported
+        try {
+          parsedUserId = new mongoose.Types.ObjectId(userId)
+        } catch (e) {
+          // Fallback: use the raw value if construction fails
+          parsedUserId = userId
+        }
+      } else {
+        parsedUserId = userId
+      }
+    } catch (e) {
+      parsedUserId = userId
+    }
+
+    const query = parsedUserId
+      ? { $or: [ { isGlobal: true, userId: null }, { userId: parsedUserId } ] }
       : { isGlobal: true, userId: null }
 
     const tags = await Tag.find(query).sort({ isGlobal: -1, nameLower: 1 }) // Global first, then alphabetical
