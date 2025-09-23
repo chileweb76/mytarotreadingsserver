@@ -195,6 +195,30 @@ router.get('/verify', async (req, res) => {
   }
 })
 
+// Verify email via POST (accepts JSON { token }) - useful for client-side
+// verification flows where the user is redirected to a client page which then
+// POSTs the token to the API. This is more reliable in serverless environments
+// where direct GET verification may hit cold-start timeouts when connecting to DB.
+router.post('/verify', async (req, res) => {
+  try {
+    const token = req.body && req.body.token
+    if (!token) return res.status(400).json({ error: 'Token is required' })
+
+    const user = await User.findOne({ verificationToken: token, verificationExpires: { $gt: Date.now() } })
+    if (!user) return res.status(400).json({ error: 'Invalid or expired token' })
+
+    user.isEmailVerified = true
+    user.verificationToken = null
+    user.verificationExpires = null
+    await user.save()
+
+    return res.json({ ok: true, message: 'Email verified' })
+  } catch (err) {
+    console.error('Verification POST error:', err)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // Resend verification email
 router.post('/resend', async (req, res) => {
   try {

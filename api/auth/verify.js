@@ -54,63 +54,19 @@ module.exports = (req, res) => {
       return
     }
 
-    // For GET requests, handle verification directly in this serverless wrapper.
+    // For GET requests, simply redirect to the client with the token preserved
+    // so the client can choose to POST it to /api/auth/verify (more reliable
+    // for serverless DB connections). This keeps email links clickable and
+    // avoids doing DB work in the edge wrapper which can sometimes time out.
     if (req.method === 'GET') {
-      if (origin) {
-        if (allowedOrigins.indexOf(origin) !== -1) {
-          res.setHeader('Access-Control-Allow-Origin', origin)
-        } else {
-          let incomingHost
-          try {
-            incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
-          } catch (e) {
-            res.status(403).end('Forbidden')
-            return
-          }
-          if (allowedHostnames.indexOf(incomingHost) !== -1) {
-            res.setHeader('Access-Control-Allow-Origin', origin)
-          } else {
-            res.status(403).end('Forbidden')
-            return
-          }
-        }
-        res.setHeader('Access-Control-Allow-Credentials', 'true')
-      }
-
-      // parse token and perform verification directly
-      const token = (req.query && req.query.token) || null
-      if (!token) {
-        return res.status(400).json({ error: 'Token is required' })
-      }
-
-      try {
-        // Connect to DB using the serverless-safe helper
-        const { connectToDatabase } = require('../../utils/connectToDatabase')
-        await connectToDatabase()
-        const mongoose = require('mongoose')
-        const User = require('../../models/User')
-
-        const user = await User.findOne({ verificationToken: token, verificationExpires: { $gt: Date.now() } })
-        if (!user) {
-          return res.status(400).json({ error: 'Invalid or expired token' })
-        }
-
-        user.isEmailVerified = true
-        user.verificationToken = null
-        user.verificationExpires = null
-        await user.save()
-
-        const redirectBase = process.env.CLIENT_URL || `${req.protocol}://${req.get('host')}`
-        const target = `${redirectBase.replace(/\/$/, '')}/auth/success?verified=true`
-        // Redirect user-agent to the client success page
-        return res.writeHead(302, { Location: target }).end()
-      } catch (err) {
-        console.error('Verification wrapper error:', err)
-        return res.status(500).json({ error: 'Internal server error' })
-      }
+      const token = (req.query && req.query.token) || ''
+      const redirectBase = process.env.CLIENT_URL || `${req.protocol}://${req.get('host')}`
+      const target = `${redirectBase.replace(/\/$/, '')}/auth/verify?token=${encodeURIComponent(token)}`
+      res.writeHead(302, { Location: target })
+      return res.end()
     }
 
-    // Fallback: forward to Express app for anything else
+    // Fallback: forward to Express app for anything else (including POST)
     try {
       if (!req.url.startsWith('/api')) req.url = `/api${req.url}`
     } catch (e) {}
