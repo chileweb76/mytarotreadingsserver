@@ -1,10 +1,13 @@
 const { put } = require('@vercel/blob');
-const fetch = require('node-fetch');
 const { connectToDatabase } = require('../utils/connectToDatabase');
+
+// Load environment variables
+require('dotenv').config();
 
 /**
  * Seed Rider-Waite Tarot Deck with Vercel Blob Storage
  * Creates a global deck that all users can access
+ * Uses built-in fetch (Node.js 18+)
  */
 
 // Complete list of 78 Rider-Waite Tarot cards
@@ -103,35 +106,36 @@ const RIDER_WAITE_CARDS = [
  */
 async function createCardImage(card) {
   try {
-    // Create a simple card image using a service (or you could use a canvas library)
-    // For now, we'll use a placeholder service that generates card-like images
-    const cardText = encodeURIComponent(card.name);
-    const cardColor = card.type === 'major' ? '4a90e2' : 
-                     card.suit === 'wands' ? 'd63031' :
-                     card.suit === 'cups' ? '0984e3' :
-                     card.suit === 'swords' ? '636e72' :
-                     card.suit === 'pentacles' ? '00b894' : '6c5ce7';
+    // Create a simple colored SVG card image directly
+    const cardColor = card.type === 'major' ? '#4a90e2' : 
+                     card.suit === 'wands' ? '#d63031' :
+                     card.suit === 'cups' ? '#0984e3' :
+                     card.suit === 'swords' ? '#636e72' :
+                     card.suit === 'pentacles' ? '#00b894' : '#6c5ce7';
     
-    // Use a placeholder service to generate card images
-    const imageUrl = `https://via.placeholder.com/300x500/${cardColor}/ffffff?text=${cardText}`;
+    // Create an SVG image
+    const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="300" height="500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="300" height="500" fill="${cardColor}" rx="15" ry="15"/>
+  <rect x="10" y="10" width="280" height="480" fill="white" rx="10" ry="10"/>
+  <text x="150" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="${cardColor}">${card.name}</text>
+  <text x="150" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" fill="${cardColor}">🃏</text>
+  <text x="150" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="${cardColor}">Rider-Waite Deck</text>
+</svg>`;
     
-    // Fetch the placeholder image
     console.log(`Generating image for: ${card.name}`);
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to generate image for ${card.name}`);
-    }
     
-    const imageBuffer = await response.buffer();
+    // Convert SVG to Buffer
+    const imageBuffer = Buffer.from(svgContent, 'utf8');
     
     // Create filename
-    const filename = card.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() + '.png';
+    const filename = card.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() + '.svg';
     const blobPath = `decks/rider-waite/${filename}`;
     
     // Upload to Vercel Blob
     const blob = await put(blobPath, imageBuffer, {
       access: 'public',
-      contentType: 'image/png',
+      contentType: 'image/svg+xml',
     });
     
     console.log(`✅ Uploaded: ${card.name} -> ${blob.url}`);
@@ -151,15 +155,31 @@ async function createDeckCover() {
   try {
     console.log('Creating Rider-Waite deck cover image...');
     
-    // Create a deck cover image
-    const coverUrl = 'https://via.placeholder.com/400x600/2d3436/ffffff?text=Rider-Waite%0ATarot%20Deck';
-    const response = await fetch(coverUrl);
-    const imageBuffer = await response.buffer();
+    // Create a deck cover SVG image
+    const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d3436;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#636e72;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="600" fill="url(#cardGrad)" rx="20" ry="20"/>
+  <rect x="15" y="15" width="370" height="570" fill="white" rx="15" ry="15"/>
+  <text x="200" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#2d3436">Rider-Waite</text>
+  <text x="200" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#2d3436">Tarot Deck</text>
+  <text x="200" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="72" fill="#4a90e2">🃏</text>
+  <text x="200" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#636e72">Complete 78-Card Collection</text>
+  <text x="200" y="480" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#636e72">Major & Minor Arcana</text>
+</svg>`;
+    
+    // Convert SVG to Buffer
+    const imageBuffer = Buffer.from(svgContent, 'utf8');
     
     // Upload deck cover to Vercel Blob
-    const blob = await put('decks/rider-waite/cover.png', imageBuffer, {
+    const blob = await put('decks/rider-waite/cover.svg', imageBuffer, {
       access: 'public',
-      contentType: 'image/png',
+      contentType: 'image/svg+xml',
     });
     
     console.log(`✅ Deck cover created: ${blob.url}`);
@@ -335,6 +355,20 @@ async function updateExistingDeck(deck) {
  */
 async function main() {
   try {
+    // Validate environment variables
+    if (!process.env.MONGODB_URI) {
+      console.error('❌ Error: MONGODB_URI environment variable is required');
+      console.log('💡 Add to your .env file: MONGODB_URI=mongodb+srv://...');
+      process.exit(1);
+    }
+    
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.error('❌ Error: BLOB_READ_WRITE_TOKEN environment variable is required');
+      console.log('💡 Get your token from: https://vercel.com/dashboard -> Storage -> Blob');
+      console.log('💡 Add to your .env file: BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxx');
+      process.exit(1);
+    }
+    
     const deck = await seedRiderWaiteDeck();
     
     console.log('\n📋 Summary:');

@@ -1,10 +1,10 @@
 const { put } = require('@vercel/blob');
 const fs = require('fs');
 const path = require('path');
-const fetch = require('node-fetch');
 
 /**
  * Utility to migrate images from frontend/local storage to Vercel Blob
+ * Uses built-in fetch (Node.js 18+)
  */
 
 const FRONTEND_BASE_URL = 'https://mytarotreadings.vercel.app';

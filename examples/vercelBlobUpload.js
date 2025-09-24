@@ -4,6 +4,7 @@ const path = require('path');
 
 /**
  * Examples of uploading files to Vercel Blob storage
+ * Uses built-in fetch (Node.js 18+)
  */
 
 // Example 1: Upload from local file path
