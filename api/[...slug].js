@@ -13,9 +13,12 @@ module.exports = async (req, res) => {
     // Parse the route from req.url to determine the model and ID
     const url = req.url || '';
     console.log('Catch-all handling URL:', url) // Debug log
+    console.log('Full req object keys:', Object.keys(req)) // Debug log
+    console.log('req.query:', req.query) // Debug log
     
     // Match /api/model/id or /model/id patterns
     const pathMatch = url.match(/^(?:\/api)?\/([^\/]+)\/([^\/]+)(?:\/.*)?$/);
+    console.log('Regex match result:', pathMatch) // Debug log
     
     if (!pathMatch) {
       // If it doesn't match a dynamic route pattern, forward to Express
