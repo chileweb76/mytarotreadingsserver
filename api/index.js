@@ -11,18 +11,13 @@ module.exports = async (req, res) => {
     
     console.log('API catch-all handling:', req.method, req.url, 'Origin:', origin); // Debug log
     
-    // Always set CORS headers first
-    const isAllowedOrigin = allowedOrigins.includes('*') || allowedOrigins.includes(origin);
-    const isAllowedHost = allowedHostnames.includes('*') || allowedHostnames.includes(requestHost);
-    
-    if (isAllowedOrigin || isAllowedHost) {
-      res.setHeader('Access-Control-Allow-Origin', origin || '*');
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin');
-      res.setHeader('Access-Control-Expose-Headers', 'Content-Length,X-Request-Id');
-      res.setHeader('Vary', 'Origin');
-    }
+    // Always set CORS headers for all requests
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length,X-Request-Id');
+    res.setHeader('Vary', 'Origin');
 
     // Handle preflight requests immediately
     if (req.method === 'OPTIONS') {
