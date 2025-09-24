@@ -6,6 +6,10 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "seed:public": "node scripts/seed_public_data.js",
+    "migrate:images": "node scripts/runImageMigration.js",
+    "migrate:images:spreads": "node scripts/runImageMigration.js --spreads",
+    "migrate:images:decks": "node scripts/runImageMigration.js --decks",
+    "migrate:images:dry-run": "node scripts/runImageMigration.js --dry-run",
     "test": "jest --runInBand"
   },
   "dependencies": {

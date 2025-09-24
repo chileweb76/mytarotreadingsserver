@@ -590,6 +590,7 @@ app.get('/api/debug/cors', (req, res) => {
 })
 app.use('/api/decks', require('./routes/decks'))
 app.use('/api/spreads', require('./routes/spreads'))
+app.use('/api/images', require('./routes/images'))
 app.use('/api/card-image', require('./routes/card-image'))
 // Server-side PDF export endpoint
 // Allow larger JSON payloads on this route because clients may POST full-page
