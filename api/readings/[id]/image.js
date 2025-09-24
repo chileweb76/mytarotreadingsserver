@@ -1,3 +1,5 @@
+const { allowedOrigins, allowedHostnames } = require('../../../utils/corsConfig');
+
 /**
  * Serverless function to handle nested reading endpoints
  * Handles: /api/readings/[id]/image and other nested paths
@@ -8,8 +10,8 @@ module.exports = async (req, res) => {
     
     console.log('Reading image handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin);
     
-    // Always set CORS headers for all requests
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    // Always set comprehensive CORS headers for all requests
+    res.setHeader('Access-Control-Allow-Origin', origin && allowedOrigins.includes(origin) ? origin : '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store');
@@ -18,7 +20,7 @@ module.exports = async (req, res) => {
 
     // Handle preflight requests
     if (req.method === 'OPTIONS') {
-      console.log('Reading image: Preflight request handled');
+      console.log('Reading image: Handling OPTIONS preflight');
       return res.status(200).end();
     }
     

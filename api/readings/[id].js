@@ -11,8 +11,8 @@ module.exports = async (req, res) => {
     console.log('Readings [id] handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin); // Debug log
     console.log('Allowed origins:', allowedOrigins); // Debug log
     
-    // Always set CORS headers - match successful patterns from other handlers
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    // Always set comprehensive CORS headers
+    res.setHeader('Access-Control-Allow-Origin', origin && allowedOrigins.includes(origin) ? origin : '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store');
@@ -21,6 +21,7 @@ module.exports = async (req, res) => {
 
     // Handle preflight requests
     if (req.method === 'OPTIONS') {
+      console.log('Readings [id] handler: Handling OPTIONS preflight')
       return res.status(200).end();
     }
     

@@ -8,15 +8,17 @@ async function handler(req, res) {
   const origin = req.headers.origin
   console.log('Readings.js handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin);
   
-  res.setHeader('Access-Control-Allow-Origin', origin || '*')
-  res.setHeader('Vary', 'Origin')
+  // Set comprehensive CORS headers
+  res.setHeader('Access-Control-Allow-Origin', origin && allowedOrigins.includes(origin) ? origin : '*')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store')
-  res.setHeader('Access-Control-Allow-Credentials', 'true')
   res.setHeader('Access-Control-Expose-Headers', 'Content-Length,X-Request-Id')
+  res.setHeader('Vary', 'Origin')
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
+    console.log('Readings.js handler: Handling OPTIONS preflight')
     return res.status(200).end()
   }
 

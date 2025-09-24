@@ -10,16 +10,17 @@ module.exports = async (req, res) => {
     const origin = req.headers.origin;
     const requestHost = req.headers.host;
     
-    // Always set CORS headers for all requests
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    // Always set comprehensive CORS headers for all requests
+    res.setHeader('Access-Control-Allow-Origin', origin && allowedOrigins.includes(origin) ? origin : '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store');
     res.setHeader('Access-Control-Expose-Headers', 'Content-Length,X-Request-Id');
     res.setHeader('Vary', 'Origin');
 
     // Handle preflight requests immediately
     if (req.method === 'OPTIONS') {
+      console.log('Catch-all handler: Handling OPTIONS preflight for', req.url)
       return res.status(200).end();
     }
     
