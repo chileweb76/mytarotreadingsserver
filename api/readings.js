@@ -7,9 +7,10 @@ async function handler(req, res) {
   // Always set CORS headers for all requests
   const origin = req.headers.origin
   console.log('Readings.js handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin);
+  console.log('Allowed origins:', allowedOrigins);
   
-  // Set comprehensive CORS headers
-  res.setHeader('Access-Control-Allow-Origin', origin && allowedOrigins.includes(origin) ? origin : '*')
+  // Set comprehensive CORS headers - use permissive origin for debugging
+  res.setHeader('Access-Control-Allow-Origin', origin || '*')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store')

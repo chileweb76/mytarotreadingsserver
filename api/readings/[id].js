@@ -8,11 +8,11 @@ module.exports = async (req, res) => {
     const origin = req.headers.origin;
     const requestHost = req.headers.host;
     
-    console.log('Readings [id] handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin); // Debug log
-    console.log('Allowed origins:', allowedOrigins); // Debug log
+    console.log('Readings [id] handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
     
-    // Always set comprehensive CORS headers
-    res.setHeader('Access-Control-Allow-Origin', origin && allowedOrigins.includes(origin) ? origin : '*');
+    // Always set comprehensive CORS headers - use permissive origin for debugging
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store');

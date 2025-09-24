@@ -10,8 +10,11 @@ module.exports = async (req, res) => {
     const origin = req.headers.origin;
     const requestHost = req.headers.host;
     
-    // Always set comprehensive CORS headers for all requests
-    res.setHeader('Access-Control-Allow-Origin', origin && allowedOrigins.includes(origin) ? origin : '*');
+    console.log('Catch-all handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+    
+    // Always set comprehensive CORS headers for all requests - use permissive origin for debugging
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store');
@@ -26,17 +29,14 @@ module.exports = async (req, res) => {
     
     // Parse the route from req.url to determine the model and ID
     const url = req.url || '';
-    console.log('Catch-all handling URL:', url) // Debug log
-    console.log('Full req object keys:', Object.keys(req)) // Debug log
-    console.log('req.query:', req.query) // Debug log
+    console.log('Catch-all parsing URL:', url);
     
     // Match /api/model/id or /model/id patterns
     const pathMatch = url.match(/^(?:\/api)?\/([^\/]+)\/([^\/]+)(?:\/.*)?$/);
-    console.log('Regex match result:', pathMatch) // Debug log
+    console.log('Path match result:', pathMatch);
     
     if (!pathMatch) {
-      // If it doesn't match a dynamic route pattern, forward to Express
-      console.log('No match, forwarding to Express')
+      console.log('No path match - forwarding to Express app');
       const app = require('../index.js');
       return app(req, res);
     }
@@ -44,22 +44,21 @@ module.exports = async (req, res) => {
     const [, model, id] = pathMatch;
     const validModels = ['decks', 'readings', 'querents', 'tags', 'spreads'];
     
-    console.log('Parsed model:', model, 'id:', id) // Debug log
+    console.log('Parsed model:', model, 'id:', id, 'valid:', validModels.includes(model));
     
-    // Only handle dynamic routes for our specific models
-    if (!validModels.includes(model)) {
-      console.log('Invalid model, forwarding to Express')
-      const app = require('../index.js');
-      return app(req, res);
-    }
-    
-    // For non-OPTIONS requests, forward to the main Express app
-    console.log('Valid model, forwarding to Express')
+    // Always forward to Express app for processing
+    console.log('Forwarding to Express app for model:', model);
     const app = require('../index.js');
     return app(req, res);
     
   } catch (error) {
-    console.error('Dynamic routes serverless error:', error);
+    console.error('Catch-all handler error:', error);
+    
+    // Even on error, ensure CORS headers are set for preflight
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+    
     return res.status(500).json({ 
       error: 'Internal server error',
       message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
