@@ -1,17 +1,15 @@
 async function handler(req, res) {
   try {
-    // Handle CORS preflight without database connection
+    console.log('Auth/me handler called with method:', req.method)
+    console.log('Origin:', req.headers.origin)
+
+    // Handle CORS preflight
     if (req.method === 'OPTIONS') {
       const origin = req.headers.origin
       
-      // Simple CORS check for our known origins
-      if (origin && (
-        origin === 'https://mytarotreadings.vercel.app' ||
-        origin.includes('mytarotreadings') ||
-        origin.includes('.vercel.app')
-      )) {
+      // Simple CORS response
+      if (origin && origin.includes('mytarotreadings.vercel.app')) {
         res.setHeader('Access-Control-Allow-Origin', origin)
-        res.setHeader('Vary', 'Origin')
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin')
         res.setHeader('Access-Control-Allow-Credentials', 'true')
@@ -20,15 +18,13 @@ async function handler(req, res) {
       return res.status(200).end()
     }
 
-    // For non-OPTIONS requests, ensure database and load Express app
-    const { ensureDatabase } = require('../../utils/connectToDatabase')
-    await ensureDatabase()
-    
+    // For non-OPTIONS requests, load Express app lazily
     const app = require('../../index')
     return app(req, res)
+
   } catch (error) {
     console.error('Auth/me handler error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    return res.status(500).json({ error: 'Internal server error', details: error.message })
   }
 }
 
