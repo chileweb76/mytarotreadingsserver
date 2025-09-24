@@ -30,6 +30,8 @@ async function handler(req, res) {
     const origin = req.headers.origin;
     const requestHost = req.headers.host;
     
+    console.log('Upload endpoint - Method:', req.method, 'URL:', req.url, 'Origin:', origin); // Debug log
+    
     // Set CORS headers
     const isAllowedOrigin = allowedOrigins.includes('*') || allowedOrigins.includes(origin);
     const isAllowedHost = allowedHostnames.includes('*') || allowedHostnames.includes(requestHost);
@@ -38,8 +40,9 @@ async function handler(req, res) {
       res.setHeader('Access-Control-Allow-Origin', origin || '*');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin');
       res.setHeader('Access-Control-Expose-Headers', 'Content-Length,X-Request-Id');
+      res.setHeader('Vary', 'Origin');
     }
 
     // Handle preflight requests
