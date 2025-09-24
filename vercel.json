@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/api/spreads/:path*", "destination": "/api/spreads" },
     { "source": "/api/readings/user", "destination": "/api/readings" },
     { "source": "/api/readings/auth/check", "destination": "/api/readings" },
     { "source": "/auth/:path*", "destination": "/api/auth/:path*" },
