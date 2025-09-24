@@ -6,10 +6,16 @@ const User = require('../models/User')
 
 // Google OAuth Strategy (only if credentials are provided)
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  // Allow the callback URL to be overridden via env var when behind a
+  // proxy (e.g. Vercel). Prefer an absolute HTTPS URL if `SERVER_URL` or
+  // `GOOGLE_CALLBACK_URL` is provided. Otherwise fall back to the
+  // previous relative path which works for local development.
+  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || (process.env.SERVER_URL ? `${process.env.SERVER_URL.replace(/\/$/, '')}/api/auth/google/callback` : '/api/auth/google/callback')
+
   passport.use(new GoogleStrategy({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "/api/auth/google/callback"
+      callbackURL: callbackUrl
     },
   async (accessToken, refreshToken, profile, done) => {
       try {

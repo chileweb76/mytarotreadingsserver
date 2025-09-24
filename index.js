@@ -15,6 +15,13 @@ let passport
 
 const app = express()
 
+// When running behind a reverse proxy (Vercel, load balancers, etc.) Express
+// needs `trust proxy` enabled so `req.protocol` reflects the original
+// client-facing protocol (https). This ensures Passport (and other
+// middleware) builds redirect URLs with the correct scheme instead of
+// defaulting to http.
+app.set('trust proxy', true)
+
 const fs = require('fs')
 const os = require('os')
 // Helper to detect serverless environment (Vercel, AWS Lambda, etc.)
