@@ -18,37 +18,22 @@ try {
   console.warn('sharp is not installed; image resizing will be skipped. Install sharp for optimal images.')
 }
 
-// Multer setup for uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '..', 'uploads'))
-  },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname)
-    // Be defensive: req.user may be missing in some edge cases; fall back to random name
-    let idPart
-    try {
-      idPart = req && req.user && req.user._id ? req.user._id.toString() : null
-    } catch (e) {
-      idPart = null
+// Blob storage for profile pictures
+const { uploadToBlob, deleteFromBlob } = require('../utils/blobStorage')
+
+// Multer setup for blob uploads (memory storage)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    // Only allow images
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only image files are allowed'), false)
     }
-    if (!idPart) {
-      const crypto = require('crypto')
-      idPart = crypto.randomBytes(6).toString('hex')
-    }
-    const fname = `${idPart}-${Date.now()}${ext}`
-    // ensure uploads dir exists
-    try {
-      const { getUploadsDir } = require('../utils/uploads')
-      getUploadsDir()
-    } catch (e) {
-      // ignore - write will fail later and be handled
-      console.warn('Could not ensure uploads dir exists', e)
-    }
-    cb(null, fname)
   }
 })
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }) // 5MB
 
 // Small utility: race a promise against a timeout
 function withTimeout(promise, ms, errMsg = 'operation timeout') {
@@ -84,30 +69,9 @@ const generateRefreshToken = () => {
   return crypto.randomBytes(32).toString('hex')
 }
 
-// Ensure uploads URLs are absolute (prefix with SERVER_URL or request host)
+// Helper function for blob URLs (they're already absolute, so just return as-is)
 function absolutizeUploadUrl(url, req) {
-  if (!url) return url
-  try {
-    // already absolute
-    const parsed = new URL(url)
-    if (parsed.protocol && parsed.hostname) return url
-  } catch (e) {
-    // not absolute
-  }
-  if (url.startsWith('/uploads/')) {
-    // Prefer SERVER_URL, then production domain, then fallback to request host
-    const serverBase = process.env.SERVER_URL
-      || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, '')}` :
-          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/\/$/, '')}` :
-           `${req.protocol}://${req.get('host')}`))
-    
-    // In serverless environments, serve uploads via API endpoint instead of static files
-    const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FUNCTIONS_WORKER_RUNTIME)
-    const uploadPath = isServerless ? url.replace('/uploads/', '/api/uploads/') : url
-    
-    return `${serverBase.replace(/\/$/, '')}${uploadPath}`
-  }
-  return url
+  return url // Blob URLs are already absolute
 }
 
 const { buildServerBase } = require('../utils/serverBase')
@@ -632,58 +596,74 @@ router.put('/profile-picture', passport.authenticate('jwt', { session: false }),
 }, async (req, res) => {
   try {
   try { require('../utils/log').debug('/api/auth/profile-picture called, req.user id=', req.user && req.user._id ? req.user._id.toString() : null) } catch (e) {}
-  try { require('../utils/log').debug('Uploaded file object (multer):', !!req.file, req.file && { originalname: req.file.originalname, filename: req.file.filename, size: req.file.size }) } catch (e) {}
+  try { require('../utils/log').debug('Uploaded file object (multer):', !!req.file, req.file && { originalname: req.file.originalname, size: req.file.size }) } catch (e) {}
     const user = await User.findById(req.user && req.user._id)
     if (!user) return res.status(401).json({ error: 'Unauthorized: user not found' })
 
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
 
-  const { getUploadsDir } = require('../utils/uploads')
-  const uploadsDir = getUploadsDir()
-    const serverBase = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`
-    const originalFilename = req.file.filename
-    const originalPath = path.join(uploadsDir, originalFilename)
+    // Upload original to Vercel Blob
+    const originalResult = await uploadToBlob(
+      req.file.buffer,
+      req.file.originalname,
+      'profiles',
+      user._id.toString()
+    )
 
     // Prepare resized variants if sharp is available
-    const variants = {}
+    const variants = {
+      web: originalResult.url,
+      small: originalResult.url,
+      thumb: originalResult.url
+    }
+
     if (sharp) {
       try {
         // web-ready max 512x512
-        const webName = `${path.parse(originalFilename).name}-512${path.parse(originalFilename).ext}`
-        const webPath = path.join(uploadsDir, webName)
-        await sharp(originalPath).resize(512, 512, { fit: 'cover' }).toFile(webPath)
-        variants.web = `${serverBase.replace(/\/$/, '')}/uploads/${webName}`
+        const webBuffer = await sharp(req.file.buffer).resize(512, 512, { fit: 'cover' }).jpeg({ quality: 85 }).toBuffer()
+        const webResult = await uploadToBlob(webBuffer, `${path.parse(req.file.originalname).name}-512.jpg`, 'profiles', user._id.toString())
+        variants.web = webResult.url
 
         // small 256x256
-        const smallName = `${path.parse(originalFilename).name}-256${path.parse(originalFilename).ext}`
-        const smallPath = path.join(uploadsDir, smallName)
-        await sharp(originalPath).resize(256, 256, { fit: 'cover' }).toFile(smallPath)
-        variants.small = `${serverBase.replace(/\/$/, '')}/uploads/${smallName}`
+        const smallBuffer = await sharp(req.file.buffer).resize(256, 256, { fit: 'cover' }).jpeg({ quality: 80 }).toBuffer()
+        const smallResult = await uploadToBlob(smallBuffer, `${path.parse(req.file.originalname).name}-256.jpg`, 'profiles', user._id.toString())
+        variants.small = smallResult.url
 
         // thumb 64x64
-        const thumbName = `${path.parse(originalFilename).name}-64${path.parse(originalFilename).ext}`
-        const thumbPath = path.join(uploadsDir, thumbName)
-        await sharp(originalPath).resize(64, 64, { fit: 'cover' }).toFile(thumbPath)
-        variants.thumb = `${serverBase.replace(/\/$/, '')}/uploads/${thumbName}`
+        const thumbBuffer = await sharp(req.file.buffer).resize(64, 64, { fit: 'cover' }).jpeg({ quality: 75 }).toBuffer()
+        const thumbResult = await uploadToBlob(thumbBuffer, `${path.parse(req.file.originalname).name}-64.jpg`, 'profiles', user._id.toString())
+        variants.thumb = thumbResult.url
       } catch (err) {
         console.error('Error resizing image with sharp:', err)
       }
     }
 
-    // Prefer the web-sized variant for profilePicture when available
-    user.profilePicture = variants.web || `${serverBase.replace(/\/$/, '')}/uploads/${originalFilename}`
-    user.profilePictureSmall = variants.small || user.profilePicture
-    user.profilePictureThumb = variants.thumb || user.profilePicture
+    // Delete old profile pictures if they exist
+    if (user.uploadedAvatar && user.profilePicture) {
+      try {
+        await deleteFromBlob(user.profilePicture)
+        await deleteFromBlob(user.profilePictureSmall)
+        await deleteFromBlob(user.profilePictureThumb)
+      } catch (err) {
+        console.warn('Failed to delete old profile pictures:', err)
+      }
+    }
+
+    // Update user with new blob URLs
+    user.profilePicture = variants.web
+    user.profilePictureSmall = variants.small
+    user.profilePictureThumb = variants.thumb
     user.uploadedAvatar = true
     await user.save()
 
-    res.json({ message: 'Profile picture updated', profilePicture: user.profilePicture, profilePictureSmall: user.profilePictureSmall, profilePictureThumb: user.profilePictureThumb })
+    res.json({ 
+      message: 'Profile picture updated', 
+      profilePicture: user.profilePicture, 
+      profilePictureSmall: user.profilePictureSmall, 
+      profilePictureThumb: user.profilePictureThumb 
+    })
   } catch (err) {
     console.error('Profile picture upload error:', err)
-    // cleanup partial files if present
-    if (req && req.file && req.file.path) {
-      try { fs.unlinkSync(req.file.path) } catch (e) {}
-    }
     res.status(500).json({ error: 'Internal server error during upload' })
   }
 })
@@ -696,36 +676,22 @@ router.delete('/profile-picture', passport.authenticate('jwt', { session: false 
 
     // Only allow removal of uploaded avatars (don't remove Google external URLs)
     if (!user.uploadedAvatar) {
-      // clear any profilePicture fields if they exist (but don't delete remote Google image)
-      user.profilePicture = user.profilePicture && user.profilePicture.includes('/uploads/') ? null : user.profilePicture
-      user.profilePictureSmall = user.profilePictureSmall && user.profilePictureSmall.includes('/uploads/') ? null : user.profilePictureSmall
-      user.profilePictureThumb = user.profilePictureThumb && user.profilePictureThumb.includes('/uploads/') ? null : user.profilePictureThumb
+      // Clear any profilePicture fields if they exist (but don't delete remote Google image)
+      user.profilePicture = user.profilePicture && (user.profilePicture.includes('/uploads/') || user.profilePicture.includes('blob.vercel-storage.com')) ? null : user.profilePicture
+      user.profilePictureSmall = user.profilePictureSmall && (user.profilePictureSmall.includes('/uploads/') || user.profilePictureSmall.includes('blob.vercel-storage.com')) ? null : user.profilePictureSmall
+      user.profilePictureThumb = user.profilePictureThumb && (user.profilePictureThumb.includes('/uploads/') || user.profilePictureThumb.includes('blob.vercel-storage.com')) ? null : user.profilePictureThumb
       await user.save()
       return res.json({ message: 'Profile picture cleared', profilePicture: user.profilePicture })
     }
 
-  const { getUploadsDir } = require('../utils/uploads')
-  const uploadsDir = getUploadsDir()
-    const deleteIfExists = async (url) => {
-      if (!url) return
-      try {
-        const parsed = new URL(url)
-        // ensure this is our uploads path
-        if (parsed.pathname && parsed.pathname.startsWith('/uploads/')) {
-          const fname = path.basename(parsed.pathname)
-          const p = path.join(uploadsDir, fname)
-          const fs = require('fs')
-          if (fs.existsSync(p)) fs.unlinkSync(p)
-        }
-      } catch (err) {
-        // ignore
-      }
+    // Delete from Vercel Blob
+    try {
+      await deleteFromBlob(user.profilePicture)
+      await deleteFromBlob(user.profilePictureSmall)
+      await deleteFromBlob(user.profilePictureThumb)
+    } catch (err) {
+      console.warn('Failed to delete blob files:', err)
     }
-
-    // remove variants
-    await deleteIfExists(user.profilePicture)
-    await deleteIfExists(user.profilePictureSmall)
-    await deleteIfExists(user.profilePictureThumb)
 
     user.profilePicture = null
     user.profilePictureSmall = null

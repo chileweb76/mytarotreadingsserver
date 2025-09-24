@@ -9,6 +9,7 @@
     "test": "jest --runInBand"
   },
   "dependencies": {
+    "@vercel/blob": "^2.0.0",
     "@vercel/functions": "^3.1.0",
     "bcryptjs": "^3.0.2",
     "connect-mongo": "^5.1.0",
@@ -20,7 +21,6 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^5.9.2",
     "mongoose": "^7.8.7",
-    
     "multer": "^2.0.2",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",

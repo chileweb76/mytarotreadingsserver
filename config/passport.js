@@ -51,21 +51,30 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
           // Attempt to download and store Google profile photo locally
           try {
-            const fetchAndStore = require('../utils/fetchAndStoreRemoteImage')
-            // Use SERVER_URL (API host) when available; prefer HTTPS production URL over localhost
-            const serverBase = process.env.SERVER_URL
-              || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, '')}` :
-                  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/\/$/, '')}` :
-                   `http://localhost:${process.env.PORT || 5002}`))
+            const { uploadToBlob } = require('../utils/blobStorage')
+            
             const remote = profile.photos?.[0]?.value
-            const variants = await fetchAndStore(remote, serverBase, `google-${profile.id}`)
-            if (variants) {
-              user.profilePicture = variants.web
-              user.profilePictureSmall = variants.small
-              user.profilePictureThumb = variants.thumb
-              user.uploadedAvatar = true
-            } else {
-              user.profilePicture = profile.photos?.[0]?.value || user.profilePicture
+            if (remote) {
+              // Fetch the image from Google
+              const response = await fetch(remote)
+              if (response.ok) {
+                const buffer = Buffer.from(await response.arrayBuffer())
+                
+                // Upload to Vercel Blob
+                const result = await uploadToBlob(
+                  buffer,
+                  `google-${profile.id}.jpg`,
+                  'profiles',
+                  user._id.toString()
+                )
+                
+                user.profilePicture = result.url
+                user.profilePictureSmall = result.url
+                user.profilePictureThumb = result.url
+                user.uploadedAvatar = true
+              } else {
+                user.profilePicture = profile.photos?.[0]?.value || user.profilePicture
+              }
             }
           } catch (e) {
             console.warn('Failed to download Google avatar for existing user', e)
@@ -80,19 +89,28 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         user = await User.createFromGoogleProfile(profile)
         // If createFromGoogleProfile didn't download (legacy), attempt to download now
         try {
-          const fetchAndStore = require('../utils/fetchAndStoreRemoteImage')
-          const serverBase = process.env.SERVER_URL
-            || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, '')}` :
-                (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/\/$/, '')}` :
-                 `http://localhost:${process.env.PORT || 5002}`))
+          const { uploadToBlob } = require('../utils/blobStorage')
           const remote = profile.photos?.[0]?.value
-          const variants = await fetchAndStore(remote, serverBase, `google-${profile.id}`)
-          if (variants && user) {
-            user.profilePicture = variants.web
-            user.profilePictureSmall = variants.small
-            user.profilePictureThumb = variants.thumb
-            user.uploadedAvatar = true
-            await user.save()
+          if (remote && user) {
+            // Fetch the image from Google
+            const response = await fetch(remote)
+            if (response.ok) {
+              const buffer = Buffer.from(await response.arrayBuffer())
+              
+              // Upload to Vercel Blob
+              const result = await uploadToBlob(
+                buffer,
+                `google-${profile.id}.jpg`,
+                'profiles',
+                user._id.toString()
+              )
+              
+              user.profilePicture = result.url
+              user.profilePictureSmall = result.url
+              user.profilePictureThumb = result.url
+              user.uploadedAvatar = true
+              await user.save()
+            }
           }
         } catch (e) {
           // ignore
