@@ -1,4 +1,4 @@
-const { connectToDatabase } = require('../utils/connectToDatabase');
+const { connectToDatabase } = require('../../utils/connectToDatabase');
 
 module.exports = async (req, res) => {
   try {
@@ -10,42 +10,41 @@ module.exports = async (req, res) => {
 
     // Handle preflight OPTIONS request
     if (req.method === 'OPTIONS') {
-      console.log('Spreads API: Handling OPTIONS preflight request');
+      console.log('Spreads API: Handling OPTIONS preflight request for ID');
       return res.status(200).end();
     }
 
-    console.log(`Spreads API: ${req.method} ${req.url}`, {
+    console.log(`Spreads API [ID]: ${req.method} ${req.url}`, {
       origin: req.headers.origin,
       query: req.query
     });
 
     // Connect to database
     await connectToDatabase();
-    const Spread = require('../models/Spread');
+    const Spread = require('../../models/Spread');
 
     if (req.method === 'GET') {
-      // Check if requesting specific spread by ID
+      // Get spread ID from the URL path
       const { id } = req.query;
       
-      if (id) {
-        // Get specific spread
-        const spread = await Spread.findById(id);
-        if (!spread) {
-          return res.status(404).json({ error: 'Spread not found' });
-        }
-        return res.status(200).json(spread);
-      } else {
-        // Get all spreads
-        const spreads = await Spread.find({}).sort({ numberofCards: 1 });
-        return res.status(200).json(spreads);
+      if (!id) {
+        return res.status(400).json({ error: 'Spread ID is required' });
       }
+
+      // Get specific spread by ID
+      const spread = await Spread.findById(id);
+      if (!spread) {
+        return res.status(404).json({ error: 'Spread not found' });
+      }
+      
+      return res.status(200).json(spread);
     }
 
     // For now, only support GET requests
     res.status(405).json({ error: 'Method not allowed' });
 
   } catch (error) {
-    console.error('Spreads API Error:', error);
+    console.error('Spreads API [ID] Error:', error);
     res.status(500).json({ 
       error: 'Internal server error',
       message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
