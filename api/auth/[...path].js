@@ -1,6 +1,7 @@
 async function handler(req, res) {
   try {
-    console.log('Auth/me handler called with method:', req.method)
+    console.log('Auth [...path] handler called with method:', req.method)
+    console.log('URL:', req.url)
     console.log('Origin:', req.headers.origin)
 
     // Handle CORS preflight
@@ -23,7 +24,7 @@ async function handler(req, res) {
     return app(req, res)
 
   } catch (error) {
-    console.error('Auth/me handler error:', error)
+    console.error('Auth [...path] handler error:', error)
     return res.status(500).json({ error: 'Internal server error', details: error.message })
   }
 }
