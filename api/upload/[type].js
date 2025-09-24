@@ -6,6 +6,7 @@
 
 const multer = require('multer')
 const { uploadToBlob, deleteFromBlob } = require('../../utils/blobStorage')
+const { allowedOrigins, allowedHostnames } = require('../../utils/corsConfig')
 
 // Multer memory storage (keeps files in memory instead of disk)
 const upload = multer({ 
@@ -26,6 +27,26 @@ const upload = multer({
 
 async function handler(req, res) {
   try {
+    const origin = req.headers.origin;
+    const requestHost = req.headers.host;
+    
+    // Set CORS headers
+    const isAllowedOrigin = allowedOrigins.includes('*') || allowedOrigins.includes(origin);
+    const isAllowedHost = allowedHostnames.includes('*') || allowedHostnames.includes(requestHost);
+    
+    if (isAllowedOrigin || isAllowedHost) {
+      res.setHeader('Access-Control-Allow-Origin', origin || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length,X-Request-Id');
+    }
+
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+    
     // Extract upload type from URL path
     const urlParts = req.url.split('/')
     const uploadType = urlParts[urlParts.length - 1] // Last part of URL
@@ -42,7 +63,7 @@ async function handler(req, res) {
             if (err) {
               console.error('Multer error:', err)
               if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({ error: 'File too large (max 10MB)' })
+                return res.status(400).json({ error: 'File too large (max 5MB)' })
               }
               return res.status(400).json({ error: err.message })
             }
