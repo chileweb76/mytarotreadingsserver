@@ -11,6 +11,7 @@ const deckSchema = new mongoose.Schema({
   image: { type: String, required: false }, // path or URL to deck cover image
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
   cards: [cardSchema],
+  isGlobal: { type: Boolean, default: false }, // Global decks available to all users
   createdAt: { type: Date, default: Date.now }
 })
 

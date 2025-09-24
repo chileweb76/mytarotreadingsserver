@@ -125,16 +125,61 @@ router.put('/:deckId/card/:cardName', async (req, res) => {
   }
 })
 
-// Get all decks
+// Get all decks (global decks + user's decks if authenticated)
 router.get('/', async (req, res) => {
   try {
-    const decks = await Deck.find({})
-    res.json(decks)
+    let query = {};
+    
+    // Always include global decks
+    if (req.user) {
+      // If authenticated, get global decks + user's decks
+      query = {
+        $or: [
+          { isGlobal: true },
+          { owner: req.user.id }
+        ]
+      };
+    } else {
+      // If not authenticated, only show global decks
+      query = { isGlobal: true };
+    }
+    
+    const decks = await Deck.find(query).sort({ isGlobal: -1, createdAt: -1 });
+    
+    // Add metadata to distinguish global vs user decks
+    const decksWithMetadata = decks.map(deck => ({
+      ...deck.toObject(),
+      isUserDeck: deck.owner && req.user && deck.owner.toString() === req.user.id,
+      isGlobalDeck: deck.isGlobal || !deck.owner
+    }));
+    
+    res.json(decksWithMetadata);
   } catch (err) {
-    console.error('Error fetching decks', err)
-    res.status(500).json({ error: 'Failed to fetch decks' })
+    console.error('Error fetching decks', err);
+    res.status(500).json({ error: 'Failed to fetch decks' });
   }
-})
+});
+
+// Get only global decks
+router.get('/global', async (req, res) => {
+  try {
+    const globalDecks = await Deck.find({ 
+      $or: [
+        { isGlobal: true },
+        { owner: null }
+      ]
+    }).sort({ createdAt: -1 });
+    
+    res.json({
+      message: 'Global decks available to all users',
+      count: globalDecks.length,
+      decks: globalDecks
+    });
+  } catch (err) {
+    console.error('Error fetching global decks', err);
+    res.status(500).json({ error: 'Failed to fetch global decks' });
+  }
+});
 
 // Get a single deck by id
 router.get('/:id', async (req, res) => {

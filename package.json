@@ -6,6 +6,7 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "seed:public": "node scripts/seed_public_data.js",
+    "seed:rider-waite": "node scripts/seedRiderWaiteBlob.js",
     "migrate:images": "node scripts/runImageMigration.js",
     "migrate:images:spreads": "node scripts/runImageMigration.js --spreads",
     "migrate:images:decks": "node scripts/runImageMigration.js --decks",
