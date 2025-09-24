@@ -1,8 +1,8 @@
-const { ensureDatabase } = require('../utils/connectToDatabase')
+const { connectToDatabase } = require('../utils/connectToDatabase')
 const { allowedOrigins, allowedHostnames } = require('../utils/corsConfig')
 
 async function handler(req, res) {
-  await ensureDatabase()
+  await connectToDatabase()
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
