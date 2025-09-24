@@ -10,6 +10,24 @@ module.exports = async (req, res) => {
     const origin = req.headers.origin;
     const requestHost = req.headers.host;
     
+    // Always set CORS headers first, regardless of the request
+    const isAllowedOrigin = allowedOrigins.includes('*') || allowedOrigins.includes(origin);
+    const isAllowedHost = allowedHostnames.includes('*') || allowedHostnames.includes(requestHost);
+    
+    if (isAllowedOrigin || isAllowedHost) {
+      res.setHeader('Access-Control-Allow-Origin', origin || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length,X-Request-Id');
+      res.setHeader('Vary', 'Origin');
+    }
+
+    // Handle preflight requests immediately
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+    
     // Parse the route from req.url to determine the model and ID
     const url = req.url || '';
     console.log('Catch-all handling URL:', url) // Debug log
@@ -39,70 +57,9 @@ module.exports = async (req, res) => {
       return app(req, res);
     }
     
-    // Determine if origin is allowed
-    let isAllowed = false;
-    let allowedOrigin = null;
-    
-    if (origin) {
-      // Check exact origin match
-      if (allowedOrigins.includes(origin)) {
-        isAllowed = true;
-        allowedOrigin = origin;
-      } else {
-        // Check hostname match
-        try {
-          const originUrl = new URL(origin);
-          const originHostname = originUrl.hostname;
-          
-          if (allowedHostnames.includes(originHostname)) {
-            isAllowed = true;
-            allowedOrigin = origin;
-          }
-          // Accept any .vercel.app subdomain as fallback
-          else if (originHostname.endsWith('.vercel.app')) {
-            isAllowed = true;
-            allowedOrigin = origin;
-          }
-        } catch (e) {
-          console.warn('Invalid origin URL:', origin);
-        }
-      }
-    }
-    
-    // Fallback: check if request host should be allowed
-    if (!isAllowed && requestHost) {
-      if (allowedHostnames.includes(requestHost) || requestHost.endsWith('.vercel.app')) {
-        isAllowed = true;
-        allowedOrigin = origin || `https://${requestHost}`;
-      }
-    }
-    
-    // Handle OPTIONS preflight requests
-    if (req.method === 'OPTIONS') {
-      if (isAllowed && allowedOrigin) {
-        res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
-        res.setHeader('Vary', 'Origin');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin');
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
-        res.setHeader('Access-Control-Max-Age', '86400');
-        return res.status(204).end();
-      } else {
-        return res.status(403).json({ error: 'Origin not allowed' });
-      }
-    }
-    
     // For non-OPTIONS requests, forward to the main Express app
+    console.log('Valid model, forwarding to Express')
     const app = require('../index.js');
-    
-    // Set CORS headers for the actual request
-    if (isAllowed && allowedOrigin) {
-      res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
-      res.setHeader('Vary', 'Origin');
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
-    
-    // Forward to Express app
     return app(req, res);
     
   } catch (error) {
