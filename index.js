@@ -481,31 +481,9 @@ app.options('/api/auth/*', (req, res) => {
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // allow non-browser or same-origin requests with no origin (like Postman, curl)
-    if (!origin) return callback(null, true)
-
-    // direct exact match first (including scheme)
-    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true)
-
-    // try matching by hostname only (ignore scheme differences)
-    let incomingHost
-    try {
-      incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
-    } catch (e) {
-      // malformed origin header - deny
-      console.warn('CORS: malformed Origin header:', origin)
-      return callback(new Error('CORS policy: Origin not allowed'), false)
-    }
-
-    if (allowedHostnames.indexOf(incomingHost) !== -1) {
-      return callback(null, true)
-    }
-
-    // Not allowed - log for debugging and return an explicit error so the
-    // request doesn't proceed. The framework will convert this into a 403/500
-    // depending on the error handler; logging helps diagnose mismatched origins.
-    console.warn('CORS blocked origin', origin, { allowedOrigins, allowedHostnames })
-    return callback(new Error('CORS policy: Origin not allowed'), false)
+    // Always allow all origins to match serverless function behavior
+    console.log('Express CORS - Origin:', origin, 'Allowing all origins');
+    return callback(null, true);
   },
   // Allow cookies to be sent cross-site and expose useful headers
   credentials: true,
@@ -515,64 +493,24 @@ const corsOptions = {
   optionsSuccessStatus: 204
 }
 
-// Use a dynamic CORS middleware so we can accept the request's own Host as
-// an allowed origin at runtime (this handles Vercel alias domains like
-// `mytarotreadingsserver.vercel.app` that may not be present in env vars).
+// Use a simplified CORS middleware that allows all origins
 app.use((req, res, next) => {
   const dynamicOptions = Object.assign({}, corsOptions)
   dynamicOptions.origin = function (origin, callback) {
-    // allow non-browser or same-origin requests with no origin (like curl)
-    if (!origin) return callback(null, true)
-
-    // direct exact match first (including scheme)
-    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true)
-
-    // try matching by hostname only (ignore scheme differences)
-    let incomingHost
-    try {
-      incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
-    } catch (e) {
-      console.warn('CORS: malformed Origin header:', origin)
-      return callback(new Error('CORS policy: Origin not allowed'), false)
-    }
-
-    // allow when hostname is included in allowedHostnames
-    if (allowedHostnames.indexOf(incomingHost) !== -1) {
-      return callback(null, true)
-    }
-
-    // Also accept when the incoming origin matches the current request host
-    // (this handles alias domains and Vercel-assigned hostnames)
-    try {
-      const reqHost = (req.get && req.get('host')) ? req.get('host').replace(/:\d+$/, '').toLowerCase() : ''
-      if (reqHost && incomingHost === reqHost) return callback(null, true)
-      // accept Vercel subdomains pragmatically (e.g., myapp.vercel.app)
-      if (incomingHost && incomingHost.endsWith('.vercel.app')) return callback(null, true)
-    } catch (e) {}
-
-    // Not allowed - log for debugging and return an explicit error
-    console.warn('CORS blocked origin', origin, { allowedOrigins, allowedHostnames })
-    return callback(new Error('CORS policy: Origin not allowed'), false)
+    // Always allow all origins to match serverless function behavior
+    console.log('Express dynamic CORS - Origin:', origin, 'Allowing all origins');
+    return callback(null, true);
   }
 
   return require('cors')(dynamicOptions)(req, res, next)
 })
 // Ensure preflight (OPTIONS) requests always receive the CORS headers.
 app.options('*', (req, res) => {
-  // Mirror the dynamic origin logic for preflight responders
+  // Always allow all origins for preflight requests
   const origin = req.headers.origin
-  let allowOrigin = '*'
-  try {
-    if (!origin) allowOrigin = '*'
-    else if (allowedOrigins.indexOf(origin) !== -1) allowOrigin = origin
-    else {
-      let incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
-      const reqHost = (req.get && req.get('host')) ? req.get('host').replace(/:\d+$/, '').toLowerCase() : ''
-      if (allowedHostnames.indexOf(incomingHost) !== -1 || incomingHost === reqHost) allowOrigin = origin
-    }
-  } catch (e) {}
-
-  res.setHeader('Access-Control-Allow-Origin', allowOrigin)
+  console.log('Express OPTIONS handler - Origin:', origin, 'Allowing all origins');
+  
+  res.setHeader('Access-Control-Allow-Origin', origin || '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
