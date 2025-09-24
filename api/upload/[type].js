@@ -11,7 +11,7 @@ const { uploadToBlob, deleteFromBlob } = require('../../utils/blobStorage')
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: { 
-    fileSize: 10 * 1024 * 1024, // 10MB max
+    fileSize: 5 * 1024 * 1024, // 5MB max
     files: 5 // Max 5 files per request
   },
   fileFilter: (req, file, cb) => {
