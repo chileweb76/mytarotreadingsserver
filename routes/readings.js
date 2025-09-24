@@ -116,8 +116,16 @@ router.get('/user', async (req, res) => {
   try {
     const userId = req.user?.id || req.headers['x-user-id'] // Support for auth header
     
+    console.log('User readings request - userId:', userId, 'user object:', req.user, 'headers:', req.headers['x-user-id'])
+    
     if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' })
+      // For now, return empty results instead of error to prevent crashes
+      console.log('No userId provided, returning empty readings list')
+      return res.json({
+        count: 0,
+        readings: [],
+        message: 'No user authentication provided'
+      })
     }
 
     const readings = await Reading.find({ userId })
@@ -127,13 +135,14 @@ router.get('/user', async (req, res) => {
       .populate('selectedTags', 'name isGlobal')
       .sort({ dateTime: -1 })
     
+    console.log(`Found ${readings.length} readings for user ${userId}`)
     res.json({
       count: readings.length,
       readings: readings
     })
   } catch (error) {
     console.error('Error fetching user reading history:', error)
-    res.status(500).json({ error: 'Failed to fetch reading history' })
+    res.status(500).json({ error: 'Failed to fetch reading history', details: error.message })
   }
 })
 
