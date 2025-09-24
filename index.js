@@ -359,6 +359,46 @@ if (process.env.NODE_ENV !== 'production') {
   if (local && allowedOrigins.indexOf(local) === -1) allowedOrigins.push(local)
 }
 
+// Temporary debugging middleware: echo the Origin header for allowed
+// origins and for Vercel-assigned subdomains (*.vercel.app). This helps
+// quickly diagnose missing CORS headers from preflight or normal requests
+// without fully relaxing the CORS policy. Remove this block when the
+// root cause is identified (for example, by ensuring `CLIENT_URL` is set
+// correctly in production env vars).
+app.use((req, res, next) => {
+  try {
+    const origin = req && req.headers && req.headers.origin
+    if (!origin) return next()
+
+    // If the origin is explicitly allowed, echo it so credentialed
+    // requests succeed.
+    if (allowedOrigins && allowedOrigins.indexOf(origin) !== -1) {
+      res.setHeader('Access-Control-Allow-Origin', origin)
+      res.setHeader('Access-Control-Allow-Credentials', 'true')
+      try { res.setHeader('Vary', 'Origin') } catch (e) {}
+      return next()
+    }
+
+    // Pragmatically accept Vercel subdomains for quick debugging: echo the
+    // incoming origin when it belongs to a vercel.app host. This is
+    // conservative compared to a wildcard and only intended for short-term
+    // troubleshooting in deployments that use vercel.app hostnames.
+    try {
+      const incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
+      if (incomingHost && incomingHost.endsWith('.vercel.app')) {
+        res.setHeader('Access-Control-Allow-Origin', origin)
+        res.setHeader('Access-Control-Allow-Credentials', 'true')
+        try { res.setHeader('Vary', 'Origin') } catch (e) {}
+      }
+    } catch (e) {
+      // ignore malformed origin
+    }
+  } catch (e) {
+    // swallow any errors here to avoid interfering with request handling
+  }
+  return next()
+})
+
 // Early lightweight OPTIONS responder: answer CORS preflight quickly without
 // loading heavier middleware (passport, session, DB). This reduces serverless
 // cold-start timeouts for preflight requests. It echoes allowed origins so
