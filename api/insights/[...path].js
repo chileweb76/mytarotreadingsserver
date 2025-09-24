@@ -1,6 +1,6 @@
 async function handler(req, res) {
   try {
-    console.log('Insights handler called with method:', req.method)
+    console.log('Insights [...path] handler called with method:', req.method)
     console.log('URL:', req.url)
     console.log('Origin:', req.headers.origin)
 
@@ -20,11 +20,11 @@ async function handler(req, res) {
     }
 
     // For non-OPTIONS requests, load Express app lazily
-    const app = require('../index')
+    const app = require('../../index')
     return app(req, res)
 
   } catch (error) {
-    console.error('Insights handler error:', error)
+    console.error('Insights [...path] handler error:', error)
     return res.status(500).json({ error: 'Internal server error', details: error.message })
   }
 }
