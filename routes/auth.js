@@ -95,7 +95,11 @@ function absolutizeUploadUrl(url, req) {
     // not absolute
   }
   if (url.startsWith('/uploads/')) {
-    const serverBase = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`
+    // Prefer SERVER_URL, then production domain, then fallback to request host
+    const serverBase = process.env.SERVER_URL
+      || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, '')}` :
+          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/\/$/, '')}` :
+           `${req.protocol}://${req.get('host')}`))
     return `${serverBase.replace(/\/$/, '')}${url}`
   }
   return url

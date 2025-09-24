@@ -52,8 +52,11 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           // Attempt to download and store Google profile photo locally
           try {
             const fetchAndStore = require('../utils/fetchAndStoreRemoteImage')
-            // Use SERVER_URL (API host) when available; fallback to localhost with server PORT
-            const serverBase = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5002}`
+            // Use SERVER_URL (API host) when available; prefer HTTPS production URL over localhost
+            const serverBase = process.env.SERVER_URL
+              || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, '')}` :
+                  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/\/$/, '')}` :
+                   `http://localhost:${process.env.PORT || 5002}`))
             const remote = profile.photos?.[0]?.value
             const variants = await fetchAndStore(remote, serverBase, `google-${profile.id}`)
             if (variants) {
@@ -78,7 +81,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         // If createFromGoogleProfile didn't download (legacy), attempt to download now
         try {
           const fetchAndStore = require('../utils/fetchAndStoreRemoteImage')
-          const serverBase = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5002}`
+          const serverBase = process.env.SERVER_URL
+            || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, '')}` :
+                (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/\/$/, '')}` :
+                 `http://localhost:${process.env.PORT || 5002}`))
           const remote = profile.photos?.[0]?.value
           const variants = await fetchAndStore(remote, serverBase, `google-${profile.id}`)
           if (variants && user) {
