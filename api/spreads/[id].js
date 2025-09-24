@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
       res.setHeader('Access-Control-Allow-Origin', origin || '*');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id');
       res.setHeader('Access-Control-Expose-Headers', 'Content-Length,X-Request-Id');
     }
 
