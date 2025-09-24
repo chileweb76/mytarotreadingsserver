@@ -1,6 +1,22 @@
 {
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "@vercel/node@18"
+    }
+  },
   "rewrites": [
     { "source": "/auth/:path*", "destination": "/api/auth/:path*" },
     { "source": "/auth", "destination": "/api/auth" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin" },
+        { "key": "Access-Control-Allow-Credentials", "value": "true" }
+      ]
+    }
   ]
 }
