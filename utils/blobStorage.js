@@ -9,6 +9,27 @@ const crypto = require('crypto')
 const path = require('path')
 
 /**
+ * Get appropriate Content-Type based on file extension
+ * @param {string} ext - File extension including the dot
+ * @returns {string} MIME type
+ */
+function getContentType(ext) {
+  const contentTypes = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml',
+    '.bmp': 'image/bmp',
+    '.tiff': 'image/tiff',
+    '.tif': 'image/tiff'
+  }
+  
+  return contentTypes[ext.toLowerCase()] || 'application/octet-stream'
+}
+
+/**
  * Upload a file buffer to Vercel Blob storage
  * @param {Buffer} buffer - File buffer 
  * @param {string} originalName - Original filename
@@ -35,7 +56,8 @@ async function uploadToBlob(buffer, originalName, folder = 'uploads', userId = n
     // Upload to Vercel Blob
     const blob = await put(blobPath, buffer, {
       access: 'public',
-      addRandomSuffix: false // We're already adding our own suffix
+      addRandomSuffix: false, // We're already adding our own suffix
+      contentType: getContentType(ext)
     })
     
     return {
