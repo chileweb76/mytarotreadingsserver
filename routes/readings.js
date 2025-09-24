@@ -111,23 +111,51 @@ router.get('/history', async (req, res) => {
   }
 })
 
-// GET /api/readings/user - Get user's reading history
-router.get('/user', async (req, res) => {
-  try {
-    const userId = req.user?.id || req.headers['x-user-id'] // Support for auth header
-    
-    console.log('User readings request - userId:', userId, 'user object:', req.user, 'headers:', req.headers['x-user-id'])
-    
-    if (!userId) {
-      // For now, return empty results instead of error to prevent crashes
-      console.log('No userId provided, returning empty readings list')
-      return res.json({
-        count: 0,
-        readings: [],
-        message: 'No user authentication provided'
+// Check authentication status
+router.get('/auth/check', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  
+  if (!token) {
+    return res.status(401).json({ 
+      authenticated: false, 
+      message: 'No token provided' 
+    })
+  }
+  
+  // Verify token using passport JWT
+  passport.authenticate('jwt', { session: false }, (err, user, info) => {
+    if (err) {
+      return res.status(500).json({ 
+        authenticated: false, 
+        message: 'Token verification error' 
       })
     }
+    
+    if (!user) {
+      return res.status(401).json({ 
+        authenticated: false, 
+        message: info?.message || 'Invalid token' 
+      })
+    }
+    
+    res.json({ 
+      authenticated: true, 
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        name: user.name 
+      } 
+    })
+  })(req, res)
+})
 
+// GET /api/readings/user - Get user's reading history (with proper JWT auth)
+router.get('/user', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id
+    
+    console.log('User readings request - authenticated user:', userId)
+    
     const readings = await Reading.find({ userId })
       .populate('querent', 'name')
       .populate('spread', 'spread')
@@ -138,7 +166,12 @@ router.get('/user', async (req, res) => {
     console.log(`Found ${readings.length} readings for user ${userId}`)
     res.json({
       count: readings.length,
-      readings: readings
+      readings: readings,
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email
+      }
     })
   } catch (error) {
     console.error('Error fetching user reading history:', error)

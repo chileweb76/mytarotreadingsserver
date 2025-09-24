@@ -6,7 +6,7 @@ async function handler(req, res) {
 
   // Always set CORS headers for all requests
   const origin = req.headers.origin
-  console.log('Readings.js handler - Method:', req.method, 'Origin:', origin, 'Setting CORS headers');
+  console.log('Readings.js handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin);
   
   res.setHeader('Access-Control-Allow-Origin', origin || '*')
   res.setHeader('Vary', 'Origin')
@@ -20,6 +20,8 @@ async function handler(req, res) {
     return res.status(200).end()
   }
 
+  console.log('Readings.js handler: Forwarding to Express app')
+  
   // Forward all non-OPTIONS requests to the Express app
   const app = require('../index')
   return app(req, res)
