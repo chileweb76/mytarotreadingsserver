@@ -553,4 +553,34 @@ router.post('/:id/image', passport.authenticate('jwt', { session: false }), uplo
   }
 })
 
+// Alias route for blob upload (if frontend expects this endpoint) - no auth required for testing
+router.post('/:id/blob/upload', upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params
+    console.log('Blob upload route called for reading:', id)
+    
+    if (!id) return res.status(400).json({ error: 'Reading id is required' })
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+
+    let reading
+    try {
+      reading = await Reading.findById(id)
+    } catch (err) {
+      return res.status(400).json({ error: 'Invalid reading id' })
+    }
+    if (!reading) return res.status(404).json({ error: 'Reading not found' })
+
+    const { buildServerBase } = require('../utils/serverBase')
+    const webPath = `${buildServerBase(req)}/uploads/readings/${req.file.filename}`
+    reading.image = webPath
+    await reading.save()
+    
+    console.log('Blob upload successful:', webPath)
+    res.json({ success: true, image: webPath, url: webPath })
+  } catch (err) {
+    console.error('Reading blob upload error', err)
+    res.status(500).json({ error: 'Blob upload failed', details: err.message })
+  }
+})
+
 module.exports = router
