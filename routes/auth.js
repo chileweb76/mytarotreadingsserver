@@ -100,7 +100,12 @@ function absolutizeUploadUrl(url, req) {
       || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, '')}` :
           (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/\/$/, '')}` :
            `${req.protocol}://${req.get('host')}`))
-    return `${serverBase.replace(/\/$/, '')}${url}`
+    
+    // In serverless environments, serve uploads via API endpoint instead of static files
+    const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FUNCTIONS_WORKER_RUNTIME)
+    const uploadPath = isServerless ? url.replace('/uploads/', '/api/uploads/') : url
+    
+    return `${serverBase.replace(/\/$/, '')}${uploadPath}`
   }
   return url
 }
