@@ -10,7 +10,16 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   // proxy (e.g. Vercel). Prefer an absolute HTTPS URL if `SERVER_URL` or
   // `GOOGLE_CALLBACK_URL` is provided. Otherwise fall back to the
   // previous relative path which works for local development.
-  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || (process.env.SERVER_URL ? `${process.env.SERVER_URL.replace(/\/$/, '')}/api/auth/google/callback` : '/api/auth/google/callback')
+  // Prefer explicit override, then SERVER_URL. If running on Vercel and
+  // SERVER_URL/GOOGLE_CALLBACK_URL are not set, `VERCEL_URL` is provided by
+  // the platform (like "mytarotreadingsserver.vercel.app"); use it to build
+  // an absolute HTTPS callback URL so Google sees a secure redirect URI.
+  const callbackUrl = process.env.GOOGLE_CALLBACK_URL
+    || (process.env.SERVER_URL ? `${process.env.SERVER_URL.replace(/\/$/, '')}/api/auth/google/callback` :
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/\/$/, '')}/api/auth/google/callback` : '/api/auth/google/callback'))
+  // Helpful debug: print the callback URL so you can confirm what Passport
+  // will send to Google. This shows up in Vercel function logs on startup.
+  try { console.log('Google OAuth callbackURL:', callbackUrl) } catch (e) {}
 
   passport.use(new GoogleStrategy({
       clientID: process.env.GOOGLE_CLIENT_ID,
