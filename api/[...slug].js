@@ -12,10 +12,14 @@ module.exports = async (req, res) => {
     
     // Parse the route from req.url to determine the model and ID
     const url = req.url || '';
-    const pathMatch = url.match(/^\/([^\/]+)\/([^\/]+)(?:\/.*)?$/);
+    console.log('Catch-all handling URL:', url) // Debug log
+    
+    // Match /api/model/id or /model/id patterns
+    const pathMatch = url.match(/^(?:\/api)?\/([^\/]+)\/([^\/]+)(?:\/.*)?$/);
     
     if (!pathMatch) {
-      // If it doesn't match a dynamic route pattern, let the catch-all handle it
+      // If it doesn't match a dynamic route pattern, forward to Express
+      console.log('No match, forwarding to Express')
       const app = require('../index.js');
       return app(req, res);
     }
@@ -23,8 +27,11 @@ module.exports = async (req, res) => {
     const [, model, id] = pathMatch;
     const validModels = ['decks', 'readings', 'querents', 'tags', 'spreads'];
     
+    console.log('Parsed model:', model, 'id:', id) // Debug log
+    
     // Only handle dynamic routes for our specific models
     if (!validModels.includes(model)) {
+      console.log('Invalid model, forwarding to Express')
       const app = require('../index.js');
       return app(req, res);
     }
