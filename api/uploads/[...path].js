@@ -10,6 +10,7 @@ async function handler(req, res) {
     // Extract the file path from the URL
     // URL format: /api/uploads/some/file.jpg
     const filePath = req.url.replace('/api/uploads', '').replace(/^\//, '')
+    console.log('Uploads endpoint requested:', filePath) // Debug log
     
     if (!filePath) {
       return res.status(400).json({ error: 'File path required' })
@@ -18,6 +19,14 @@ async function handler(req, res) {
     // Security: prevent directory traversal
     if (filePath.includes('..') || filePath.includes('\\')) {
       return res.status(400).json({ error: 'Invalid file path' })
+    }
+
+    // Handle legacy Google profile images that were migrated to Blob storage
+    if (filePath.startsWith('google-') && filePath.endsWith('.jpg')) {
+      return res.status(410).json({ 
+        error: 'File migrated to cloud storage',
+        message: 'This Google profile image has been migrated to Vercel Blob storage. Please refresh your profile to get the updated URL.'
+      })
     }
 
     const uploadsDir = getUploadsDir()
