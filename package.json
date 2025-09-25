@@ -5,14 +5,10 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "seed:public": "node scripts/seed_public_data.js",
-    "seed:rider-waite": "node scripts/seedRiderWaiteBlob.js",
+  "seed:public": "node scripts/seedSpreadsBlob.js",
+  "seed:rider-waite": "node scripts/seed_rider_waite_local.js",
     "seed:spreads": "node scripts/seedSpreadsBlob.js",
-    "test:spreads": "node scripts/testSpreads.js",
-    "migrate:images": "node scripts/runImageMigration.js",
-    "migrate:images:spreads": "node scripts/runImageMigration.js --spreads",
-    "migrate:images:decks": "node scripts/runImageMigration.js --decks",
-    "migrate:images:dry-run": "node scripts/runImageMigration.js --dry-run",
+  "test:spreads": "node scripts/testSpreads.js",
     "test": "jest --runInBand"
   },
   "dependencies": {

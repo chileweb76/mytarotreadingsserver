@@ -1,0 +1,402 @@
+{
+  "_id": "68d58cb9f6e0100e4f1d2587",
+  "deckName": "Rider-Waite Tarot Deck",
+  "__v": 0,
+  "cards": [
+    {
+      "name": "The Fool",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_fool-haI33vQ3le1D4EPGllV9ukxMQLLk5e.png",
+      "_id": "68d58cb9b66452ed0f93395d"
+    },
+    {
+      "name": "The Magician",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_magician-9FukDRgYUUsI8m7xFBlZNS9EAh82Az.png",
+      "_id": "68d58cb9b66452ed0f93395e"
+    },
+    {
+      "name": "The High Priestess",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_priestess-Krm4TetXhFZwz2xIRxHyEb7yxXyap8.png",
+      "_id": "68d58cb9b66452ed0f93395f"
+    },
+    {
+      "name": "The Empress",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_empress-kBQJMQlqojynBUI4qNjrJFoXLQvg3v.png",
+      "_id": "68d58cb9b66452ed0f933960"
+    },
+    {
+      "name": "The Emperor",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_emperor-MfCFbNjMCHM8xAA6wHKhrNsQFBaVoc.png",
+      "_id": "68d58cb9b66452ed0f933961"
+    },
+    {
+      "name": "The Hierophant",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_hierophant-WUybuknz5HaWtMvVjRhc9NdXsVlGts.png",
+      "_id": "68d58cb9b66452ed0f933962"
+    },
+    {
+      "name": "The Lovers",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_lovers-EBD5559lytVT5R5OPG2FRE34uNzOsw.png",
+      "_id": "68d58cb9b66452ed0f933963"
+    },
+    {
+      "name": "The Chariot",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_chariot-od3OSJLjUMRc5qMJWPZkgZVgueR3nN.png",
+      "_id": "68d58cb9b66452ed0f933964"
+    },
+    {
+      "name": "Strength",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_strength-3rcNc2RdqhG4QFQGtyokNAzbgm6kTh.png",
+      "_id": "68d58cb9b66452ed0f933965"
+    },
+    {
+      "name": "The Hermit",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_hermit-tPs8Rjf5vy8x76CyLm9tllbC3fLHPY.png",
+      "_id": "68d58cb9b66452ed0f933966"
+    },
+    {
+      "name": "Wheel of Fortune",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_fortune-3rcNc2RdqhG4QFQGtyokNAzbgm6kTh.png",
+      "_id": "68d58cb9b66452ed0f933967"
+    },
+    {
+      "name": "Justice",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_justice-seJZ3BMiFBPZw7LHfq9G9ehH4ZIWxI.png",
+      "_id": "68d58cb9b66452ed0f933968"
+    },
+    {
+      "name": "The Hanged Man",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_hanged-fD82FdvsyJshcEgQvlm1qOko0KMW0o.png",
+      "_id": "68d58cb9b66452ed0f933969"
+    },
+    {
+      "name": "Death",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_death-767cVLxgRV4GfFdFbuJfqAAp7vYtNe.png",
+      "_id": "68d58cb9b66452ed0f93396a"
+    },
+    {
+      "name": "Temperance",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_temperance-3rcNc2RdqhG4QFQGtyokNAzbgm6kTh.png",
+      "_id": "68d58cb9b66452ed0f93396b"
+    },
+    {
+      "name": "The Devil",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_devil-fHgYfV5aEqrgEVS64a1KcnD4XKlPEz.png",
+      "_id": "68d58cb9b66452ed0f93396c"
+    },
+    {
+      "name": "The Tower",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_tower-3rcNc2RdqhG4QFQGtyokNAzbgm6kTh.png",
+      "_id": "68d58cb9b66452ed0f93396d"
+    },
+    {
+      "name": "The Star",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_star-B682kjBecsPW1Po72OruQsYIx2w1tz.png",
+      "_id": "68d58cb9b66452ed0f93396e"
+    },
+    {
+      "name": "The Moon",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_moon-5JeOYw6VnlO4haHybQlKNhbwyLxyhn.png",
+      "_id": "68d58cb9b66452ed0f93396f"
+    },
+    {
+      "name": "The Sun",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_sun-5JeOYw6VnlO4haHybQlKNhbwyLxyhn.png",
+      "_id": "68d58cb9b66452ed0f933970"
+    },
+    {
+      "name": "Judgement",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_judgement-UGBqB03F4Uxq1tZ7hAG5AjC1VpXfiG.png",
+      "_id": "68d58cb9b66452ed0f933971"
+    },
+    {
+      "name": "The World",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/major_arcana_world-3rcNc2RdqhG4QFQGtyokNAzbgm6kTh.png",
+      "_id": "68d58cb9b66452ed0f933972"
+    },
+    {
+      "name": "Ace of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_ace.png",
+      "_id": "68d58cb9b66452ed0f933973"
+    },
+    {
+      "name": "Two of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_2.png",
+      "_id": "68d58cb9b66452ed0f933974"
+    },
+    {
+      "name": "Three of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_3.png",
+      "_id": "68d58cb9b66452ed0f933975"
+    },
+    {
+      "name": "Four of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_4.png",
+      "_id": "68d58cb9b66452ed0f933976"
+    },
+    {
+      "name": "Five of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_5.png",
+      "_id": "68d58cb9b66452ed0f933977"
+    },
+    {
+      "name": "Six of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_6.png",
+      "_id": "68d58cb9b66452ed0f933978"
+    },
+    {
+      "name": "Seven of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_7.png",
+      "_id": "68d58cb9b66452ed0f933979"
+    },
+    {
+      "name": "Eight of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_8.png",
+      "_id": "68d58cb9b66452ed0f93397a"
+    },
+    {
+      "name": "Nine of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_9.png",
+      "_id": "68d58cb9b66452ed0f93397b"
+    },
+    {
+      "name": "Ten of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_10.png",
+      "_id": "68d58cb9b66452ed0f93397c"
+    },
+    {
+      "name": "Page of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_page.png",
+      "_id": "68d58cb9b66452ed0f93397d"
+    },
+    {
+      "name": "Knight of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_knight.png",
+      "_id": "68d58cb9b66452ed0f93397e"
+    },
+    {
+      "name": "Queen of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_queen.png",
+      "_id": "68d58cb9b66452ed0f93397f"
+    },
+    {
+      "name": "King of Wands",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_wands_king.png",
+      "_id": "68d58cb9b66452ed0f933980"
+    },
+    {
+      "name": "Ace of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_ace.png",
+      "_id": "68d58cb9b66452ed0f933981"
+    },
+    {
+      "name": "Two of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_2.png",
+      "_id": "68d58cb9b66452ed0f933982"
+    },
+    {
+      "name": "Three of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_3.png",
+      "_id": "68d58cb9b66452ed0f933983"
+    },
+    {
+      "name": "Four of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_4.png",
+      "_id": "68d58cb9b66452ed0f933984"
+    },
+    {
+      "name": "Five of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_5.png",
+      "_id": "68d58cb9b66452ed0f933985"
+    },
+    {
+      "name": "Six of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_6.png",
+      "_id": "68d58cb9b66452ed0f933986"
+    },
+    {
+      "name": "Seven of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_7.png",
+      "_id": "68d58cb9b66452ed0f933987"
+    },
+    {
+      "name": "Eight of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_8.png",
+      "_id": "68d58cb9b66452ed0f933988"
+    },
+    {
+      "name": "Nine of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_9.png",
+      "_id": "68d58cb9b66452ed0f933989"
+    },
+    {
+      "name": "Ten of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_10.png",
+      "_id": "68d58cb9b66452ed0f93398a"
+    },
+    {
+      "name": "Page of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_page.png",
+      "_id": "68d58cb9b66452ed0f93398b"
+    },
+    {
+      "name": "Knight of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_knight.png",
+      "_id": "68d58cb9b66452ed0f93398c"
+    },
+    {
+      "name": "Queen of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_queen.png",
+      "_id": "68d58cb9b66452ed0f93398d"
+    },
+    {
+      "name": "King of Cups",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_cups_king.png",
+      "_id": "68d58cb9b66452ed0f93398e"
+    },
+    {
+      "name": "Ace of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_ace.png",
+      "_id": "68d58cb9b66452ed0f93398f"
+    },
+    {
+      "name": "Two of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_2.png",
+      "_id": "68d58cb9b66452ed0f933990"
+    },
+    {
+      "name": "Three of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_3.png",
+      "_id": "68d58cb9b66452ed0f933991"
+    },
+    {
+      "name": "Four of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_4.png",
+      "_id": "68d58cb9b66452ed0f933992"
+    },
+    {
+      "name": "Five of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_5.png",
+      "_id": "68d58cb9b66452ed0f933993"
+    },
+    {
+      "name": "Six of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_6.png",
+      "_id": "68d58cb9b66452ed0f933994"
+    },
+    {
+      "name": "Seven of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_7.png",
+      "_id": "68d58cb9b66452ed0f933995"
+    },
+    {
+      "name": "Eight of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_8.png",
+      "_id": "68d58cb9b66452ed0f933996"
+    },
+    {
+      "name": "Nine of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_9.png",
+      "_id": "68d58cb9b66452ed0f933997"
+    },
+    {
+      "name": "Ten of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_10.png",
+      "_id": "68d58cb9b66452ed0f933998"
+    },
+    {
+      "name": "Page of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_page.png",
+      "_id": "68d58cb9b66452ed0f933999"
+    },
+    {
+      "name": "Knight of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_knight.png",
+      "_id": "68d58cb9b66452ed0f93399a"
+    },
+    {
+      "name": "Queen of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_queen.png",
+      "_id": "68d58cb9b66452ed0f93399b"
+    },
+    {
+      "name": "King of Swords",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_swords_king.png",
+      "_id": "68d58cb9b66452ed0f93399c"
+    },
+    {
+      "name": "Ace of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_ace.png",
+      "_id": "68d58cb9b66452ed0f93399d"
+    },
+    {
+      "name": "Two of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_2.png",
+      "_id": "68d58cb9b66452ed0f93399e"
+    },
+    {
+      "name": "Three of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_3.png",
+      "_id": "68d58cb9b66452ed0f93399f"
+    },
+    {
+      "name": "Four of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_4.png",
+      "_id": "68d58cb9b66452ed0f9339a0"
+    },
+    {
+      "name": "Five of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_5.png",
+      "_id": "68d58cb9b66452ed0f9339a1"
+    },
+    {
+      "name": "Six of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_6.png",
+      "_id": "68d58cb9b66452ed0f9339a2"
+    },
+    {
+      "name": "Seven of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_7.png",
+      "_id": "68d58cb9b66452ed0f9339a3"
+    },
+    {
+      "name": "Eight of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_8.png",
+      "_id": "68d58cb9b66452ed0f9339a4"
+    },
+    {
+      "name": "Nine of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_9.png",
+      "_id": "68d58cb9b66452ed0f9339a5"
+    },
+    {
+      "name": "Ten of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_10.png",
+      "_id": "68d58cb9b66452ed0f9339a6"
+    },
+    {
+      "name": "Page of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_page.png",
+      "_id": "68d58cb9b66452ed0f9339a7"
+    },
+    {
+      "name": "Knight of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_knight.png",
+      "_id": "68d58cb9b66452ed0f9339a8"
+    },
+    {
+      "name": "Queen of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_queen.png",
+      "_id": "68d58cb9b66452ed0f9339a9"
+    },
+    {
+      "name": "King of Pentacles",
+      "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/minor_arcana_pentacles_king.png",
+      "_id": "68d58cb9b66452ed0f9339aa"
+    }
+  ],
+  "createdAt": "2025-09-25T18:40:57.798Z",
+  "description": "The Rider-Waite Tarot deck, also known as the Rider-Waite-Smith deck, is one of the most popular tarot decks in use today. Created by Arthur Edward Waite and illustrated by Pamela Colman Smith, it was first published in 1909. This deck is renowned for its detailed symbolic imagery and accessibility, making it an ideal choice for both beginners and experienced readers. The 78-card deck includes 22 Major Arcana cards representing life's major spiritual lessons and 56 Minor Arcana cards representing day-to-day experiences.",
+  "image": "https://emfobsnlxploca6s.public.blob.vercel-storage.com/cards/rider-waite/cover-F6ZDJ0ImEUj5Cxmcf57Pj4Fp3Xx78f.jpg",
+  "isGlobal": true,
+  "owner": null
+}

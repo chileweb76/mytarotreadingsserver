@@ -32,7 +32,6 @@ module.exports = async (req, res) => {
     
     // Add deck cover mapping
     if (deck && deck.image) {
-      mapping['/images/rider-waite-tarot/cover.svg'] = deck.image;
       mapping['/images/rider-waite-tarot/cover.jpg'] = deck.image;
       mapping['/images/rider-waite-tarot/cover.png'] = deck.image;
     }
@@ -49,7 +48,6 @@ module.exports = async (req, res) => {
             
           mapping[`/images/rider-waite-tarot/major_arcana_${cardSlug}.png`] = card.image;
           mapping[`/images/rider-waite-tarot/major_arcana_${cardSlug}.jpg`] = card.image;
-          mapping[`/images/rider-waite-tarot/major_arcana_${cardSlug}.svg`] = card.image;
         }
       });
     }

@@ -36,7 +36,7 @@ module.exports = async (req, res) => {
     }
     
     // Handle cover image
-    if (fileName === 'cover.svg' || fileName === 'cover.jpg' || fileName === 'cover.png') {
+    if (fileName === 'cover.jpg' || fileName === 'cover.png') {
       if (deck.image && deck.image.startsWith('https://')) {
         console.log(`Redirecting cover to: ${deck.image}`);
         return res.redirect(deck.image);
@@ -49,7 +49,7 @@ module.exports = async (req, res) => {
       let cardName = fileName
         .replace(/^major_arcana_/, '')
         .replace(/^minor_arcana_/, '')
-        .replace(/\.(png|jpg|svg)$/, '')
+  .replace(/\.(png|jpg)$/, '')
         .replace(/_/g, ' ')
         .replace(/\b\w/g, l => l.toUpperCase());
       
