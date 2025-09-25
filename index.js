@@ -592,6 +592,8 @@ app.use('/api/decks', require('./routes/decks'))
 app.use('/api/spreads', require('./routes/spreads'))
 app.use('/api/images', require('./routes/images'))
 app.use('/api/card-image', require('./routes/card-image'))
+// Serve blob-url-mapping.json for frontend verification/debugging
+app.use('/api/blob-mapping', require('./routes/blob-mapping'))
 // Server-side PDF export endpoint
 // Allow larger JSON payloads on this route because clients may POST full-page
 // HTML with inlined base64 images (canvas data URLs). Default express.json

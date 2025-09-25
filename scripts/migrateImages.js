@@ -25,8 +25,15 @@ async function uploadToBlob(filePath, fileName, folder = 'images') {
       if (!response.ok) {
         throw new Error(`Failed to fetch ${filePath}: ${response.statusText}`);
       }
-      fileBuffer = await response.buffer();
+      // Node's global fetch provides arrayBuffer(); convert to Buffer.
+      const arrayBuffer = await response.arrayBuffer();
+      fileBuffer = Buffer.from(arrayBuffer);
+      // Prefer the server-provided content-type, but fall back to common types
       contentType = response.headers.get('content-type') || 'image/jpeg';
+      // If content-type is generic or missing and the URL ends with .svg, set it explicitly
+      if ((!contentType || contentType === 'application/octet-stream' || contentType === 'text/plain') && filePath.toLowerCase().endsWith('.svg')) {
+        contentType = 'image/svg+xml'
+      }
     } else if (fs.existsSync(filePath)) {
       // Local file
       console.log(`Reading local file: ${filePath}`);
@@ -164,8 +171,8 @@ async function migrateAllImages() {
   try {
     console.log('🚀 Starting complete image migration to Vercel Blob...');
     
-    // Connect to database
-    require('../utils/connectToDatabase')();
+  // Connect to database (connectToDatabase exports an object with connectToDatabase)
+  await require('../utils/connectToDatabase').connectToDatabase();
     
     await migrateSpreadImages();
     await migrateDeckImages();

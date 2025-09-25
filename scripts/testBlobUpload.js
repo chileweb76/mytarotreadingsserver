@@ -23,6 +23,9 @@ async function testBlobUpload() {
     const blob = await put('test/test-image.png', testImageBuffer, {
       access: 'public',
       contentType: 'image/png',
+      // Avoid "already exists" errors during repeated test runs by adding
+      // a random suffix to the filename so each upload is unique.
+      addRandomSuffix: true,
     });
     
     console.log('✅ Upload successful!');
