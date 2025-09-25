@@ -30,6 +30,8 @@ module.exports = async (req, res) => {
     const idx = parts.indexOf('readings');
     const tail = idx >= 0 ? parts.slice(idx + 1) : [];
 
+    console.log('Readings API - pathname:', pathname, 'parts:', parts, 'tail:', tail);
+
     // If no tail -> collection endpoints
     if (tail.length === 0) {
       // GET /api/readings -> forward to main Express app for collection handling
@@ -53,6 +55,7 @@ module.exports = async (req, res) => {
 
     if (tail[1] === 'blob' && tail[2] === 'upload') {
       // Forward to express - the express app handles blob uploads
+      console.log('Readings API - handling blob upload for id:', tail[0]);
       const app = require('../../index');
       return app(req, res);
     }
