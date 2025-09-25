@@ -23,6 +23,13 @@ module.exports = async (req, res) => {
     // Only connect to database for non-OPTIONS requests
     await connectToDatabase();
 
+    // Parse path segments after /api/readings
+    const host = req.headers.host || 'localhost';
+    const pathname = new URL(req.url, `http://${host}`).pathname;
+    const parts = pathname.split('/').filter(Boolean);
+    const idx = parts.indexOf('readings');
+    const tail = idx >= 0 ? parts.slice(idx + 1) : [];
+
     // If no tail -> collection endpoints
     if (tail.length === 0) {
       // GET /api/readings -> forward to main Express app for collection handling
