@@ -6,7 +6,7 @@ module.exports = async (req, res) => {
     const origin = req.headers.origin;
     console.log('Readings merged handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin);
 
-    // CORS headers
+    // Set CORS headers immediately
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -14,18 +14,13 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Expose-Headers', 'Content-Length,X-Request-Id');
     res.setHeader('Vary', 'Origin');
 
+    // Handle OPTIONS preflight immediately without any other processing
     if (req.method === 'OPTIONS') {
-      console.log('Readings merged handler: Handling OPTIONS preflight');
+      console.log('Readings merged handler: Handling OPTIONS preflight, returning 200');
       return res.status(200).end();
     }
 
-    // Parse path segments after /api/readings
-    const host = req.headers.host || 'localhost';
-    const pathname = new URL(req.url, `http://${host}`).pathname;
-    const parts = pathname.split('/').filter(Boolean);
-    const idx = parts.indexOf('readings');
-    const tail = idx >= 0 ? parts.slice(idx + 1) : [];
-
+    // Only connect to database for non-OPTIONS requests
     await connectToDatabase();
 
     // If no tail -> collection endpoints
@@ -65,6 +60,17 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     console.error('Readings merged handler error:', error);
+    
+    // Ensure CORS headers are set even in error cases
+    try {
+      const origin = req.headers.origin;
+      res.setHeader('Access-Control-Allow-Origin', origin || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Vary', 'Origin');
+    } catch (corsError) {
+      console.error('Failed to set CORS headers in error handler:', corsError);
+    }
+    
     return res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 };
