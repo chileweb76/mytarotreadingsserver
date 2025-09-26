@@ -1,4 +1,50 @@
-const { allowedOrigins, allowedHostnames } = require('../utils/corsConfig');
+const { connectToDatabase } = require('../utils/connectToDatabase');
+
+/**
+ * Unified serverless function to handle all API routes with consistent CORS
+ */
+module.exports = async (req, res) => {
+  const origin = req.headers.origin;
+  
+  // Set CORS headers first - always allow the requesting origin
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id');
+  res.setHeader('Vary', 'Origin');
+
+  // Handle OPTIONS preflight immediately
+  if (req.method === 'OPTIONS') {
+    console.log('Unified API: Handling OPTIONS preflight for', req.url);
+    return res.status(200).end();
+  }
+
+  try {
+    console.log('Unified API - Method:', req.method, 'URL:', req.url, 'Origin:', origin);
+
+    // Connect to database for non-OPTIONS requests
+    await connectToDatabase();
+
+    // Route to Express app for all requests - let Express handle the routing
+    const app = require('../index');
+    return app(req, res);
+
+  } catch (error) {
+    console.error('Unified API error:', error);
+    
+    // Ensure CORS headers are set even in error cases
+    try {
+      res.setHeader('Access-Control-Allow-Origin', origin || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Vary', 'Origin');
+    } catch (corsError) {
+      console.error('Failed to set CORS headers in error handler:', corsError);
+    }
+    
+    return res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+};
 
 /**
  * Unified serverless function to handle CORS preflight for all dynamic routes
