@@ -2,23 +2,24 @@ const { connectToDatabase } = require('../../utils/connectToDatabase');
 const { allowedOrigins } = require('../../utils/corsConfig');
 
 module.exports = async (req, res) => {
+  const origin = req.headers.origin;
+  
+  // Set CORS headers first, outside try-catch to ensure they're always set
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length,X-Request-Id');
+  res.setHeader('Vary', 'Origin');
+
+  // Handle OPTIONS preflight immediately
+  if (req.method === 'OPTIONS') {
+    console.log('Readings merged handler: Handling OPTIONS preflight, returning 200');
+    return res.status(200).end();
+  }
+
   try {
-    const origin = req.headers.origin;
     console.log('Readings merged handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin);
-
-    // Set CORS headers immediately
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Length,X-Request-Id');
-    res.setHeader('Vary', 'Origin');
-
-    // Handle OPTIONS preflight immediately without any other processing
-    if (req.method === 'OPTIONS') {
-      console.log('Readings merged handler: Handling OPTIONS preflight, returning 200');
-      return res.status(200).end();
-    }
 
     // Only connect to database for non-OPTIONS requests
     await connectToDatabase();
