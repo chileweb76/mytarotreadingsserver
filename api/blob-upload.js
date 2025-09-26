@@ -22,13 +22,17 @@ module.exports = async (req, res) => {
     // For non-OPTIONS requests, connect to database and forward to Express app
     await connectToDatabase();
     
-    // Parse the reading ID from the query parameters since this is a catch-all route
-    const readingId = req.query.id || req.query.path?.[0];
+    // Parse the reading ID from the query parameters
+    const readingId = req.query.id;
     console.log('Blob upload for reading ID:', readingId);
     
-    // Set the reading ID in the URL params so the Express route can find it
+    if (!readingId) {
+      return res.status(400).json({ error: 'Reading ID is required as query parameter' });
+    }
+    
+    // Modify the request to match what the Express route expects
     req.params = { id: readingId };
-    req.url = req.url.replace(/^\/api\/blob-upload/, `/api/readings/${readingId}/blob/upload`);
+    req.url = `/api/readings/${readingId}/blob/upload`;
     
     const app = require('../../index');
     return app(req, res);
