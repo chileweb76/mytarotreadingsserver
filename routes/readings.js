@@ -7,6 +7,35 @@ const path = require('path')
 const fs = require('fs')
 const passport = require('passport')
 
+// Helper: parse client-sent date/time values robustly.
+// If the client sends a timezone-less "YYYY-MM-DDTHH:mm" (typical from
+// <input type="datetime-local">), browsers will often stringify it without
+// a timezone. When Node's Date parses such a string it can be interpreted as
+// UTC in some environments which shifts the stored time. To preserve the
+// intended local wall-clock time, detect the pattern and construct a Date
+// using local components.
+function parseClientDate(value) {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value !== 'string') {
+    try { return new Date(value) } catch (e) { return null }
+  }
+  // ISO with timezone or trailing Z -> safe to parse normally
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(value)) {
+    return new Date(value)
+  }
+  // Match YYYY-MM-DDTHH:mm(:ss)? optionally
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/)
+  if (m) {
+    const [ , y, mo, d, hh, mm, ss ] = m
+    const year = parseInt(y, 10), month = parseInt(mo, 10) - 1, day = parseInt(d, 10)
+    const hour = parseInt(hh, 10), minute = parseInt(mm, 10), second = ss ? parseInt(ss,10) : 0
+    return new Date(year, month, day, hour, minute, second)
+  }
+  // Fallback to default Date parsing
+  return new Date(value)
+}
+
 // Multer setup for reading image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -310,7 +339,7 @@ router.put('/:id', async (req, res) => {
       question: typeof question !== 'undefined' ? question : reading.question,
       interpretation: typeof interpretation !== 'undefined' ? interpretation : reading.interpretation,
       outcome: typeof outcome !== 'undefined' ? outcome : reading.outcome,
-      dateTime: dateTime ? new Date(dateTime) : reading.dateTime,
+      dateTime: dateTime ? parseClientDate(dateTime) : reading.dateTime,
       // allow changing querent/spread/deck on explicit save
       querent: typeof querent !== 'undefined' ? resolvedQuerentForUpdate : reading.querent,
       spread: typeof spread !== 'undefined' ? (spread || null) : reading.spread,
@@ -532,7 +561,7 @@ router.post('/', async (req, res) => {
       image: image || null,
       question: question || '',
       deck: deck || null,
-      dateTime: new Date(dateTime),
+      dateTime: parseClientDate(dateTime),
       drawnCards: Array.isArray(drawnCards) ? drawnCards : (drawnCards ? [drawnCards] : []),
       interpretation: interpretation || '',
       selectedTags: Array.isArray(selectedTags) ? selectedTags : [],
