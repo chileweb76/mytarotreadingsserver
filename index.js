@@ -482,7 +482,6 @@ app.options('/api/auth/*', (req, res) => {
 const corsOptions = {
   origin: function (origin, callback) {
     // Always allow all origins to match serverless function behavior
-    console.log('Express CORS - Origin:', origin, 'Allowing all origins');
     return callback(null, true);
   },
   // Allow cookies to be sent cross-site and expose useful headers
@@ -498,7 +497,6 @@ app.use((req, res, next) => {
   const dynamicOptions = Object.assign({}, corsOptions)
   dynamicOptions.origin = function (origin, callback) {
     // Always allow all origins to match serverless function behavior
-    console.log('Express dynamic CORS - Origin:', origin, 'Allowing all origins');
     return callback(null, true);
   }
 
@@ -508,7 +506,6 @@ app.use((req, res, next) => {
 app.options('*', (req, res) => {
   // Always allow all origins for preflight requests
   const origin = req.headers.origin
-  console.log('Express OPTIONS handler - Origin:', origin, 'Allowing all origins');
   
   res.setHeader('Access-Control-Allow-Origin', origin || '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')

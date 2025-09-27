@@ -115,9 +115,8 @@ router.get('/', async (req, res) => {
     try {
       const savedReading = new Reading(reading)
       await savedReading.save()
-      console.log('📝 Reading saved to MongoDB')
     } catch (mongoError) {
-      console.log('⚠️ MongoDB save failed (continuing anyway):', mongoError.message)
+      // Continue even if save fails
     }
     
     res.json(reading)
@@ -187,8 +186,6 @@ router.get('/user', passport.authenticate('jwt', { session: false }), async (req
   try {
     const userId = req.user.id || req.user._id
     
-    console.log('User readings request - authenticated user:', userId)
-    
     const readings = await Reading.find({ userId })
       .populate('querent', 'name')
       .populate('spread', 'spread')
@@ -196,7 +193,6 @@ router.get('/user', passport.authenticate('jwt', { session: false }), async (req
       .populate('selectedTags', 'name isGlobal')
       .sort({ dateTime: -1 })
     
-    console.log(`Found ${readings.length} readings for user ${userId}`)
     res.json({
       count: readings.length,
       readings: readings,
@@ -216,8 +212,6 @@ router.get('/user', passport.authenticate('jwt', { session: false }), async (req
 router.get('/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
     const { id } = req.params
-    // Debug: log Authorization header to help diagnose 401 in production
-    try { require('../utils/log').debug('[readings GET] Authorization header present:', !!req.headers.authorization) } catch (e) {}
     const userId = req.user?.id || req.headers['x-user-id']
     
     if (!userId) {
@@ -272,10 +266,8 @@ router.put('/:id', passport.authenticate('jwt', { session: false }), async (req,
       }
     }
     if (!reading) {
-      console.warn('[readings PUT] Reading not found for id (sanitized):', idSan, 'original id:', id)
       return res.status(404).json({ error: 'Reading not found' })
     }
-  try { require('../utils/log').debug('[readings PUT] found reading:', { id: String(reading._id), userId: reading.userId ? String(reading.userId) : null }) } catch (e) {}
 
     if (reading.userId?.toString() !== userId) {
       return res.status(403).json({ error: 'Not authorized to edit this reading' })
@@ -524,12 +516,9 @@ router.post('/', async (req, res) => {
           }
         }
       }
-    } catch (e) {
-      console.warn('Querent resolution failed (querent lookup skipped):', e && e.message)
-      resolvedQuerent = (incomingQuerent === 'self' ? null : incomingQuerent)
-    }
-
-    // Debug: log incoming querent and resolved result to help diagnose unexpected nulls
+      } catch (e) {
+        resolvedQuerent = null
+      }    // Debug: log incoming querent and resolved result to help diagnose unexpected nulls
     try {
       require('../utils/log').debug('[readings POST] incoming querent:', { rawQuerent: querent, type: typeof querent })
       require('../utils/log').debug('[readings POST] resolvedQuerent before coercion:', { resolvedQuerent, effectiveUserId })
@@ -556,7 +545,6 @@ router.post('/', async (req, res) => {
     const clientProvidedQuerent = typeof querent !== 'undefined' && querent !== null
     const clientQuerentIsSelf = (typeof querent === 'string' && (querent === 'self' || querent.trim() === ''))
     if (clientProvidedQuerent && !clientQuerentIsSelf && (querentToSave === null)) {
-      console.warn('[readings POST] client provided querent could not be resolved:', { querent })
       return res.status(400).json({ error: 'Querent could not be resolved. Please select a valid querent or choose Self.' })
     }
 
@@ -581,12 +569,6 @@ router.post('/', async (req, res) => {
       .populate('spread', 'spread')
       .populate('deck', 'deckName')
       .populate('selectedTags', 'name isGlobal')
-
-    try {
-      require('../utils/log').debug('[readings POST] saved reading querent:', { querent: populated.querent })
-    } catch (e) { /* ignore */ }
-
-    console.log('📝 Reading saved to MongoDB:', savedReading._id)
 
     res.status(201).json({
       success: true,
@@ -632,7 +614,6 @@ router.post('/:id/image', passport.authenticate('jwt', { session: false }), uplo
         await reading.save()
         return res.json({ success: true, image: blob.url, blob: blob })
       } catch (err) {
-        console.error('Vercel Blob upload failed, falling back to disk:', err)
         // fall through to disk fallback
       }
     }
@@ -652,7 +633,6 @@ router.post('/:id/image', passport.authenticate('jwt', { session: false }), uplo
 router.post('/:id/blob/upload', memoryUpload.single('image'), async (req, res) => {
   try {
     const { id } = req.params
-    console.log('Blob upload route called for reading:', id)
     
     if (!id) return res.status(400).json({ error: 'Reading id is required' })
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
@@ -667,7 +647,6 @@ router.post('/:id/blob/upload', memoryUpload.single('image'), async (req, res) =
 
     // If Vercel Blob configured, upload the in-memory buffer directly
     const VERCEL_BLOB_TOKEN = process.env.VERCEL_BLOB_TOKEN || process.env.VERCEL_STORAGE_TOKEN
-    console.log('Blob upload debug - Token present:', !!VERCEL_BLOB_TOKEN, 'File buffer present:', !!(req.file && req.file.buffer))
     
     if (VERCEL_BLOB_TOKEN && req.file && req.file.buffer) {
       try {
@@ -675,18 +654,13 @@ router.post('/:id/blob/upload', memoryUpload.single('image'), async (req, res) =
         const ext = path.extname(req.file.originalname) || '.jpg'
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`
         const blobPath = `readings/${id}/${fileName}`
-        console.log('Attempting Vercel Blob upload to path:', blobPath)
         const blob = await put(blobPath, req.file.buffer, { access: 'public', contentType: req.file.mimetype })
         reading.image = blob.url
         await reading.save()
-        console.log('✅ Blob upload successful:', blob.url)
         return res.json({ success: true, image: blob.url, url: blob.url, blob })
       } catch (err) {
-        console.error('❌ Vercel Blob direct upload failed:', err)
         // fall through to disk fallback
       }
-    } else {
-      console.log('Using disk fallback - Token:', !!VERCEL_BLOB_TOKEN, 'Buffer:', !!(req.file && req.file.buffer))
     }
 
     const { buildServerBase } = require('../utils/serverBase')
@@ -694,7 +668,6 @@ router.post('/:id/blob/upload', memoryUpload.single('image'), async (req, res) =
     reading.image = webPath
     await reading.save()
     
-    console.log('Blob upload successful (disk fallback):', webPath)
     res.json({ success: true, image: webPath, url: webPath })
   } catch (err) {
     console.error('Reading blob upload error', err)

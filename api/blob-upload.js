@@ -3,7 +3,6 @@ const { connectToDatabase } = require('../utils/connectToDatabase');
 module.exports = async (req, res) => {
   try {
     const origin = req.headers.origin;
-    console.log('Dedicated blob upload handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin);
 
     // Set CORS headers immediately
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
@@ -15,7 +14,6 @@ module.exports = async (req, res) => {
 
     // Handle OPTIONS preflight immediately
     if (req.method === 'OPTIONS') {
-      console.log('Dedicated blob upload handler: Handling OPTIONS preflight, returning 200');
       return res.status(200).end();
     }
 
@@ -24,9 +22,6 @@ module.exports = async (req, res) => {
     
     // Parse the reading ID from the query parameters
     const readingId = req.query.id;
-    console.log('Blob upload for reading ID:', readingId);
-    console.log('Request headers:', Object.keys(req.headers));
-    console.log('Content-Type:', req.headers['content-type']);
     
     if (!readingId) {
       return res.status(400).json({ error: 'Reading ID is required as query parameter' });

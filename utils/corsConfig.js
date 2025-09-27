@@ -40,8 +40,7 @@ try {
   allowedOrigins = Array.isArray(normalized) ? normalized : (normalized ? [normalized] : [])
   allowedHostnames = allowedOrigins.map(hostnameOf).filter(Boolean)
 } catch (e) {
-  // Defensive fallback — log error and expose sensible defaults.
-  try { console.error('utils/corsConfig failed to build allowedOrigins:', e) } catch (e2) {}
+  // Fallback to safe defaults if config loading fails
   allowedOrigins = ['http://localhost:3000']
   allowedHostnames = [hostnameOf('http://localhost:3000')]
 }

@@ -31,14 +31,10 @@ module.exports = async (req, res) => {
 
   // Short-circuit preflight requests early
   if (req.method === 'OPTIONS') {
-    console.log('Catch-all handler: Handling OPTIONS preflight for', req.url);
     return res.status(200).end();
   }
 
   try {
-    console.log('Catch-all handler - Method:', req.method, 'URL:', req.url, 'Origin:', origin);
-    console.log('Allowed origins (server):', Array.isArray(allowedOrigins) ? allowedOrigins.join(',') : (allowedOrigins || 'undefined'));
-
     // Ensure DB connection is ready for non-OPTIONS requests
     await connectToDatabase();
 
