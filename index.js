@@ -445,7 +445,7 @@ app.use((req, res, next) => {
   // correct CORS headers, and always send a header the browser can see.
   try { res.setHeader('Vary', 'Origin') } catch (e) {}
   res.setHeader('Access-Control-Max-Age', '3600')
-  return res.status(204).end()
+  return res.status(200).end()
 })
 
 // Targeted fast responder for auth-related preflight requests. Some routes
@@ -476,7 +476,7 @@ app.options('/api/auth/*', (req, res) => {
   res.setHeader('Access-Control-Allow-Credentials', 'true')
   try { res.setHeader('Vary', 'Origin') } catch (e) {}
   res.setHeader('Access-Control-Max-Age', '3600')
-  return res.status(204).end()
+  return res.status(200).end()
 })
 
 const corsOptions = {
@@ -490,7 +490,7 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id', 'X-Requested-With', 'Accept', 'Origin', 'x-vercel-blob-store'],
   exposedHeaders: ['Content-Length', 'X-Request-Id'],
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 200
 }
 
 // Use a simplified CORS middleware that allows all origins
