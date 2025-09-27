@@ -25,6 +25,8 @@ module.exports = async (req, res) => {
     // Parse the reading ID from the query parameters
     const readingId = req.query.id;
     console.log('Blob upload for reading ID:', readingId);
+    console.log('Request headers:', Object.keys(req.headers));
+    console.log('Content-Type:', req.headers['content-type']);
     
     if (!readingId) {
       return res.status(400).json({ error: 'Reading ID is required as query parameter' });

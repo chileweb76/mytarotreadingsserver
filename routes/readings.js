@@ -667,21 +667,26 @@ router.post('/:id/blob/upload', memoryUpload.single('image'), async (req, res) =
 
     // If Vercel Blob configured, upload the in-memory buffer directly
     const VERCEL_BLOB_TOKEN = process.env.VERCEL_BLOB_TOKEN || process.env.VERCEL_STORAGE_TOKEN
+    console.log('Blob upload debug - Token present:', !!VERCEL_BLOB_TOKEN, 'File buffer present:', !!(req.file && req.file.buffer))
+    
     if (VERCEL_BLOB_TOKEN && req.file && req.file.buffer) {
       try {
         const { put } = require('@vercel/blob')
         const ext = path.extname(req.file.originalname) || '.jpg'
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`
         const blobPath = `readings/${id}/${fileName}`
+        console.log('Attempting Vercel Blob upload to path:', blobPath)
         const blob = await put(blobPath, req.file.buffer, { access: 'public', contentType: req.file.mimetype })
         reading.image = blob.url
         await reading.save()
-        console.log('Blob upload successful:', blob.url)
+        console.log('✅ Blob upload successful:', blob.url)
         return res.json({ success: true, image: blob.url, url: blob.url, blob })
       } catch (err) {
-        console.error('Vercel Blob direct upload failed:', err)
+        console.error('❌ Vercel Blob direct upload failed:', err)
         // fall through to disk fallback
       }
+    } else {
+      console.log('Using disk fallback - Token:', !!VERCEL_BLOB_TOKEN, 'Buffer:', !!(req.file && req.file.buffer))
     }
 
     const { buildServerBase } = require('../utils/serverBase')
