@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
     req.params = { id: readingId };
     req.url = `/api/readings/${readingId}/blob/upload`;
     
-    const app = require('../../index');
+    const app = require('../index');
     return app(req, res);
 
   } catch (error) {
