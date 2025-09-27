@@ -1,4 +1,4 @@
-const { connectToDatabase } = require('../../../utils/connectToDatabase')
+const { connectToDatabase } = require('../../utils/connectToDatabase')
 
 // Try to load centralized cors config, fall back to permissive defaults
 let allowedOrigins = ['http://localhost:3000']
@@ -34,8 +34,8 @@ module.exports = async (req, res) => {
 
   try {
     // ensure DB is ready and forward request to main Express app
-    await connectToDatabase()
-    const app = require('../../../index')
+  await connectToDatabase()
+  const app = require('../../index')
     return app(req, res)
   } catch (err) {
     console.error('Error in api/readings/[id] handler:', err)
