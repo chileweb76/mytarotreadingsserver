@@ -19,20 +19,31 @@ function hostnameOf(urlOrHost) {
 }
 
 // Build allowed origins from multiple env vars: ALLOWED_ORIGINS (comma-separated),
-// CLIENT_URL and SERVER_URL. We deduplicate and normalize them.
-const candidates = []
-if (process.env.ALLOWED_ORIGINS) candidates.push(process.env.ALLOWED_ORIGINS)
-if (process.env.CLIENT_URL) candidates.push(process.env.CLIENT_URL)
-if (process.env.SERVER_URL) candidates.push(process.env.SERVER_URL)
-// When running on Vercel, runtime exposes VERCEL_URL (e.g. myproj.vercel.app).
-// Include it as an allowed origin so same-origin browser requests from the
-// deployed domain are accepted even if SERVER_URL/CLIENT_URL are not set.
-if (process.env.VERCEL_URL) candidates.push(`https://${process.env.VERCEL_URL}`)
-if (candidates.length === 0) candidates.push('http://localhost:3000')
+// CLIENT_URL and SERVER_URL. We deduplicate and normalize them. Wrap in a
+// try/catch so serverless deployments can't fail module load due to an
+// unexpected runtime error; ensure we always export arrays.
+let allowedOrigins = []
+let allowedHostnames = []
+try {
+  const candidates = []
+  if (process.env.ALLOWED_ORIGINS) candidates.push(process.env.ALLOWED_ORIGINS)
+  if (process.env.CLIENT_URL) candidates.push(process.env.CLIENT_URL)
+  if (process.env.SERVER_URL) candidates.push(process.env.SERVER_URL)
+  // When running on Vercel, runtime exposes VERCEL_URL (e.g. myproj.vercel.app).
+  // Include it as an allowed origin so same-origin browser requests from the
+  // deployed domain are accepted even if SERVER_URL/CLIENT_URL are not set.
+  if (process.env.VERCEL_URL) candidates.push(`https://${process.env.VERCEL_URL}`)
+  if (candidates.length === 0) candidates.push('http://localhost:3000')
 
-const joined = candidates.join(',')
-const normalized = normalizeOrigin(joined)
-const allowedOrigins = Array.isArray(normalized) ? normalized : (normalized ? [normalized] : [])
-const allowedHostnames = allowedOrigins.map(hostnameOf).filter(Boolean)
+  const joined = candidates.join(',')
+  const normalized = normalizeOrigin(joined)
+  allowedOrigins = Array.isArray(normalized) ? normalized : (normalized ? [normalized] : [])
+  allowedHostnames = allowedOrigins.map(hostnameOf).filter(Boolean)
+} catch (e) {
+  // Defensive fallback — log error and expose sensible defaults.
+  try { console.error('utils/corsConfig failed to build allowedOrigins:', e) } catch (e2) {}
+  allowedOrigins = ['http://localhost:3000']
+  allowedHostnames = [hostnameOf('http://localhost:3000')]
+}
 
 module.exports = { normalizeOrigin, hostnameOf, allowedOrigins, allowedHostnames }
