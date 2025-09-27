@@ -50,7 +50,11 @@ const storage = multer.diskStorage({
   }
 })
 
+// Disk-based upload (legacy / local dev)
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }) // 5MB limit
+
+// Memory-based upload for direct Vercel Blob streaming
+const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
 
 // Sample tarot cards data
 const tarotCards = [
@@ -212,6 +216,8 @@ router.get('/user', passport.authenticate('jwt', { session: false }), async (req
 router.get('/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
     const { id } = req.params
+    // Debug: log Authorization header to help diagnose 401 in production
+    try { require('../utils/log').debug('[readings GET] Authorization header present:', !!req.headers.authorization) } catch (e) {}
     const userId = req.user?.id || req.headers['x-user-id']
     
     if (!userId) {
@@ -613,8 +619,26 @@ router.post('/:id/image', passport.authenticate('jwt', { session: false }), uplo
       return res.status(403).json({ error: 'Not authorized to upload image for this reading' })
     }
 
-  const { buildServerBase } = require('../utils/serverBase')
-  const webPath = `${buildServerBase(req)}/uploads/readings/${req.file.filename}`
+    // If Vercel Blob is configured, prefer streaming the file to blob storage
+    const VERCEL_BLOB_TOKEN = process.env.VERCEL_BLOB_TOKEN || process.env.VERCEL_STORAGE_TOKEN
+    if (VERCEL_BLOB_TOKEN && req.file && req.file.buffer) {
+      try {
+        const { put } = require('@vercel/blob')
+        const timestamp = Date.now()
+        const ext = path.extname(req.file.originalname) || '.jpg'
+        const blobPath = `readings/${reading._id}/${timestamp}${ext}`
+        const blob = await put(blobPath, req.file.buffer, { access: 'public', contentType: req.file.mimetype })
+        reading.image = blob.url
+        await reading.save()
+        return res.json({ success: true, image: blob.url, blob: blob })
+      } catch (err) {
+        console.error('Vercel Blob upload failed, falling back to disk:', err)
+        // fall through to disk fallback
+      }
+    }
+
+    const { buildServerBase } = require('../utils/serverBase')
+    const webPath = `${buildServerBase(req)}/uploads/readings/${req.file.filename}`
     reading.image = webPath
     await reading.save()
     res.json({ success: true, image: webPath })
@@ -625,7 +649,7 @@ router.post('/:id/image', passport.authenticate('jwt', { session: false }), uplo
 })
 
 // Alias route for blob upload (if frontend expects this endpoint) - no auth required for testing
-router.post('/:id/blob/upload', upload.single('image'), async (req, res) => {
+router.post('/:id/blob/upload', memoryUpload.single('image'), async (req, res) => {
   try {
     const { id } = req.params
     console.log('Blob upload route called for reading:', id)
@@ -641,12 +665,31 @@ router.post('/:id/blob/upload', upload.single('image'), async (req, res) => {
     }
     if (!reading) return res.status(404).json({ error: 'Reading not found' })
 
+    // If Vercel Blob configured, upload the in-memory buffer directly
+    const VERCEL_BLOB_TOKEN = process.env.VERCEL_BLOB_TOKEN || process.env.VERCEL_STORAGE_TOKEN
+    if (VERCEL_BLOB_TOKEN && req.file && req.file.buffer) {
+      try {
+        const { put } = require('@vercel/blob')
+        const ext = path.extname(req.file.originalname) || '.jpg'
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`
+        const blobPath = `readings/${id}/${fileName}`
+        const blob = await put(blobPath, req.file.buffer, { access: 'public', contentType: req.file.mimetype })
+        reading.image = blob.url
+        await reading.save()
+        console.log('Blob upload successful:', blob.url)
+        return res.json({ success: true, image: blob.url, url: blob.url, blob })
+      } catch (err) {
+        console.error('Vercel Blob direct upload failed:', err)
+        // fall through to disk fallback
+      }
+    }
+
     const { buildServerBase } = require('../utils/serverBase')
     const webPath = `${buildServerBase(req)}/uploads/readings/${req.file.filename}`
     reading.image = webPath
     await reading.save()
     
-    console.log('Blob upload successful:', webPath)
+    console.log('Blob upload successful (disk fallback):', webPath)
     res.json({ success: true, image: webPath, url: webPath })
   } catch (err) {
     console.error('Reading blob upload error', err)
