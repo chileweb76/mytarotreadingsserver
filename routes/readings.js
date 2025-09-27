@@ -209,7 +209,7 @@ router.get('/user', passport.authenticate('jwt', { session: false }), async (req
 })
 
 // GET /api/readings/:id - Get a single reading by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
     const { id } = req.params
     const userId = req.user?.id || req.headers['x-user-id']
@@ -239,7 +239,7 @@ router.get('/:id', async (req, res) => {
 })
 
 // PUT /api/readings/:id - Update a reading
-router.put('/:id', async (req, res) => {
+router.put('/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
     const { id } = req.params
     // Accept additional writable fields on update so explicit Save persists everything
@@ -396,7 +396,7 @@ router.put('/:id', async (req, res) => {
 })
 
 // DELETE /api/readings/:id - Delete a reading
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
     const { id } = req.params
     const userId = req.user?.id || req.headers['x-user-id']
