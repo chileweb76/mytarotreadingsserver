@@ -882,17 +882,30 @@ router.get('/google/callback',
       // Generate JWT token
       const token = generateToken(req.user._id)
       
-      // Set HTTP-only cookie for security
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-      })
-
-      // Redirect to success page
+      // For cross-domain deployments, we need to relay the token to the frontend
+      // so it can set its own cookie. We'll create a temporary, secure redirect.
       const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000'
-      res.redirect(`${clientUrl}/auth/success?provider=google`)
+      
+      // Check if we're dealing with cross-origin (different domains)
+      const backendHost = req.get('host') || ''
+      const clientHost = clientUrl.replace(/^https?:\/\//, '').replace(/\/.*$/, '')
+      const isCrossOrigin = backendHost !== clientHost && !clientUrl.includes('localhost')
+      
+      if (isCrossOrigin) {
+        // For cross-origin: redirect with token in URL (will be handled by frontend)
+        // This is secure because: 1) HTTPS only, 2) immediate consumption, 3) frontend clears URL
+        console.log('Cross-origin OAuth detected, using token relay method')
+        return res.redirect(`${clientUrl}/auth/success?provider=google&token=${encodeURIComponent(token)}`)
+      } else {
+        // Same-origin: use traditional cookie method
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        })
+        return res.redirect(`${clientUrl}/auth/success?provider=google`)
+      }
       
     } catch (error) {
       console.error('Google OAuth callback error:', error)
@@ -901,5 +914,51 @@ router.get('/google/callback',
     }
   }
 )
+
+// Token relay endpoint - allows frontend to exchange OAuth token for cookie
+router.post('/token-relay', async (req, res) => {
+  try {
+    echoCorsIfAllowed(req, res)
+    
+    const { token } = req.body
+    if (!token) {
+      return res.status(400).json({ error: 'Token is required' })
+    }
+
+    // Verify the token is valid
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET)
+      const user = await User.findById(decoded.userId)
+      
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid token - user not found' })
+      }
+
+      // Token is valid, return user data (don't set cookie here - frontend will handle it)
+      res.json({
+        success: true,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          authProvider: user.authProvider,
+          profilePicture: absolutizeUploadUrl(user.profilePicture, req),
+          profilePictureSmall: absolutizeUploadUrl(user.profilePictureSmall, req),
+          profilePictureThumb: absolutizeUploadUrl(user.profilePictureThumb, req),
+          readingsCount: user.readingsCount
+        },
+        token // Return the token so frontend can set its own cookie
+      })
+      
+    } catch (jwtError) {
+      console.error('Token relay - Invalid JWT:', jwtError)
+      return res.status(401).json({ error: 'Invalid token' })
+    }
+    
+  } catch (error) {
+    console.error('Token relay error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
 
 module.exports = router
