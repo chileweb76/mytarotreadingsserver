@@ -184,11 +184,22 @@ router.get('/global', async (req, res) => {
 // Get a single deck by id
 router.get('/:id', async (req, res) => {
   try {
-    const deck = await Deck.findById(req.params.id)
-    if (!deck) return res.status(404).json({ error: 'Deck not found' })
+    const deckId = req.params.id
+    console.log('🔍 Backend: Fetching deck with ID:', deckId)
+    console.log('🔍 Backend: ID type and length:', typeof deckId, deckId?.length)
+    
+    const deck = await Deck.findById(deckId)
+    console.log('🔍 Backend: Deck lookup result:', deck ? 'FOUND' : 'NOT_FOUND')
+    
+    if (!deck) {
+      console.log('🔍 Backend: Deck not found, returning 404')
+      return res.status(404).json({ error: 'Deck not found' })
+    }
+    
+    console.log('🔍 Backend: Returning deck:', deck.deckName)
     res.json(deck)
   } catch (err) {
-    console.error('Error fetching deck', err)
+    console.error('🔍 Backend: Error fetching deck', err)
     res.status(500).json({ error: 'Failed to fetch deck' })
   }
 })
