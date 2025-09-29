@@ -489,41 +489,7 @@ router.post('/login', async (req, res) => {
   }
 })
 
-// Google OAuth routes (only if configured)
-router.get('/google', (req, res, next) => {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    return res.status(400).json({ error: 'Google OAuth not configured' })
-  }
-  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next)
-})
 
-router.get('/google/callback', (req, res, next) => {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    return res.redirect(`${process.env.CLIENT_URL}/auth/error`)
-  }
-  passport.authenticate('google', { session: false })(req, res, next)
-}, async (req, res) => {
-  try {
-    // Generate token
-    const token = generateToken(req.user._id)
-    
-    // Update last login
-    req.user.lastLoginAt = new Date()
-    await req.user.save()
-
-  // generate refresh token and save
-  const refreshToken = generateRefreshToken()
-  req.user.refreshToken = refreshToken
-  await req.user.save()
-
-    // Redirect to frontend with token and refresh token
-    // Note: we only send token in URL; client will call /auth/me to get refresh token via JSON when it exchanges the token.
-    res.redirect(`${process.env.CLIENT_URL}/auth/success?token=${token}`)
-  } catch (error) {
-    console.error('Google callback error:', error)
-    res.redirect(`${process.env.CLIENT_URL}/auth/error`)
-  }
-})
 
 // Exchange refresh token for new JWT
 router.post('/refresh', async (req, res) => {
@@ -893,5 +859,47 @@ router.get('/preview-verify', (req, res) => {
 
   res.json({ payload })
 })
+
+// Google OAuth routes
+// Initiate Google OAuth flow
+router.get('/google', passport.authenticate('google', { 
+  scope: ['profile', 'email'] 
+}))
+
+// Google OAuth callback
+router.get('/google/callback', 
+  passport.authenticate('google', { session: false }),
+  async (req, res) => {
+    try {
+      echoCorsIfAllowed(req, res)
+      
+      if (!req.user) {
+        console.error('Google OAuth callback: No user found')
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000'
+        return res.redirect(`${clientUrl}/auth/error?error=oauth_failed`)
+      }
+
+      // Generate JWT token
+      const token = generateToken(req.user._id)
+      
+      // Set HTTP-only cookie for security
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      })
+
+      // Redirect to success page
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000'
+      res.redirect(`${clientUrl}/auth/success?provider=google`)
+      
+    } catch (error) {
+      console.error('Google OAuth callback error:', error)
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000'
+      res.redirect(`${clientUrl}/auth/error?error=oauth_callback_failed`)
+    }
+  }
+)
 
 module.exports = router
