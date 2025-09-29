@@ -599,6 +599,17 @@ app.use('/api/export', express.json({ limit: '50mb' }), require('./routes/export
 // Insights endpoints
 app.use('/api/insights', require('./routes/insights'))
 
+// Auth endpoints (OAuth, login, register, etc.)
+app.use('/api/auth', require('./routes/auth'))
+
+// User-related endpoints
+app.use('/api/readings', require('./routes/readings'))
+app.use('/api/querents', require('./routes/querents'))  
+app.use('/api/tags', require('./routes/tags'))
+
+// Health check endpoint
+app.use('/api/health', require('./routes/health'))
+
 // Backwards-compatible redirect: some emails may contain /auth/verify (no /api/)
 // Redirect those to the API verify endpoint so legacy links don't 404.
 app.get('/auth/verify', (req, res) => {
