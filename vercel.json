@@ -1,10 +1,12 @@
 {
   "rewrites": [
+    { "source": "/api/decks/:path*", "destination": "/api" },
     { "source": "/api/spreads/:path*", "destination": "/api/spreads" },
     { "source": "/api/readings/user", "destination": "/api/readings" },
     { "source": "/api/readings/auth/check", "destination": "/api/readings" },
     { "source": "/auth/:path*", "destination": "/api/auth/:path*" },
-    { "source": "/auth", "destination": "/api/auth" }
+    { "source": "/auth", "destination": "/api/auth" },
+    { "source": "/api/:path*", "destination": "/api" }
   ],
   "headers": [
     {
