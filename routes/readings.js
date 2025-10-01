@@ -694,7 +694,29 @@ router.post('/:id/image', authenticateUser, upload.single('image'), async (req, 
 })
 
 // Alias route for blob upload (if frontend expects this endpoint) - no auth required for testing
-router.post('/:id/blob/upload', memoryUpload.single('image'), async (req, res) => {
+// Handle OPTIONS preflight for blob upload
+router.options('/:id/blob/upload', (req, res) => {
+  const origin = req.headers.origin
+  if (origin && (origin.includes('vercel.app') || origin.includes('localhost'))) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, User-Agent')
+  }
+  res.status(200).end()
+})
+
+router.post('/:id/blob/upload', (req, res, next) => {
+  // Add CORS headers for blob upload
+  const origin = req.headers.origin
+  if (origin && (origin.includes('vercel.app') || origin.includes('localhost'))) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, User-Agent')
+  }
+  next()
+}, memoryUpload.single('image'), async (req, res) => {
   try {
     const { id } = req.params
     
