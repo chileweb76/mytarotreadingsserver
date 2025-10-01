@@ -239,7 +239,7 @@ router.get('/:id', passport.authenticate('jwt', { session: false }), async (req,
 })
 
 // PUT /api/readings/:id - Update a reading
-router.put('/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
+router.put('/:id', authenticateUser, async (req, res) => {
   try {
     const { id } = req.params
     // Accept additional writable fields on update so explicit Save persists everything
@@ -425,8 +425,66 @@ router.delete('/:id', passport.authenticate('jwt', { session: false }), async (r
   }
 })
 
+// Middleware function to handle authentication fallback
+const authenticateUser = async (req, res, next) => {
+  try {
+    // Try passport JWT first
+    passport.authenticate('jwt', { session: false })(req, res, (err) => {
+      if (!err && req.user) {
+        return next()
+      }
+      
+      // If passport fails, try custom JWT auth as fallback
+      console.warn('🟡 Passport JWT failed, trying custom auth fallback')
+      
+      // Extract token manually
+      let token = null
+      const authHeader = req.headers.authorization
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1]
+      }
+      
+      // Try cookie fallback
+      if (!token && req.headers.cookie) {
+        const cookieMatch = req.headers.cookie.match(/token=([^;]+)/)
+        if (cookieMatch) {
+          token = decodeURIComponent(cookieMatch[1])
+        }
+      }
+      
+      if (!token) {
+        return res.status(401).json({ error: 'No authentication token provided' })
+      }
+      
+      // Use fallback JWT verification
+      try {
+        const { verifyJWT } = require('../utils/jwtVerify')
+        verifyJWT(token, process.env.JWT_SECRET).then(async (payload) => {
+          const User = require('../models/User')
+          const user = await User.findById(payload.userId)
+          if (user) {
+            req.user = user
+            return next()
+          } else {
+            return res.status(401).json({ error: 'User not found' })
+          }
+        }).catch((jwtError) => {
+          console.error('🔴 Custom JWT verification failed:', jwtError)
+          return res.status(401).json({ error: 'Invalid authentication token' })
+        })
+      } catch (customError) {
+        console.error('🔴 Custom auth fallback failed:', customError)
+        return res.status(401).json({ error: 'Authentication failed' })
+      }
+    })
+  } catch (error) {
+    console.error('🔴 Authentication middleware error:', error)
+    return res.status(500).json({ error: 'Authentication service error' })
+  }
+}
+
 // POST /api/readings - Save a new reading - Require authentication
-router.post('/', passport.authenticate('jwt', { session: false }), async (req, res) => {
+router.post('/', authenticateUser, async (req, res) => {
   try {
     const {
       querent,
@@ -440,6 +498,14 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
       selectedTags,
       userId
     } = req.body
+
+    // Debug: log the selectedTags to see what's being received
+    console.log('🔵 [readings POST] selectedTags received:', {
+      selectedTags,
+      type: typeof selectedTags,
+      isArray: Array.isArray(selectedTags),
+      length: selectedTags?.length
+    })
 
     // Validate required fields
     if (!dateTime) {
@@ -552,6 +618,23 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
       return res.status(400).json({ error: 'Querent could not be resolved. Please select a valid querent or choose Self.' })
     }
 
+    // Process selectedTags - ensure they are valid ObjectIds
+    let processedTags = []
+    if (selectedTags) {
+      try {
+        if (Array.isArray(selectedTags)) {
+          processedTags = selectedTags
+            .filter(tag => tag && (typeof tag === 'string' || mongoose.Types.ObjectId.isValid(tag)))
+            .map(tag => mongoose.Types.ObjectId.isValid(String(tag)) ? new mongoose.Types.ObjectId(String(tag)) : null)
+            .filter(Boolean)
+        }
+        console.log('🔵 [readings POST] processedTags:', processedTags)
+      } catch (tagError) {
+        console.warn('🟡 [readings POST] Error processing selectedTags:', tagError)
+        processedTags = []
+      }
+    }
+
     // Create new reading
     const reading = new Reading({
       querent: querentToSave,
@@ -562,9 +645,11 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
       dateTime: parseClientDate(dateTime),
       drawnCards: Array.isArray(drawnCards) ? drawnCards : (drawnCards ? [drawnCards] : []),
       interpretation: interpretation || '',
-      selectedTags: Array.isArray(selectedTags) ? selectedTags : [],
+      selectedTags: processedTags,
       userId: effectiveUserId || null
     })
+
+    console.log('🔵 [readings POST] Creating reading with selectedTags:', reading.selectedTags)
 
     const savedReading = await reading.save()
     // Load with populated querent/spread/deck for clarity in the response
@@ -638,16 +723,28 @@ router.post('/:id/blob/upload', memoryUpload.single('image'), async (req, res) =
   try {
     const { id } = req.params
     
+    console.log('🔵 [blob upload] Starting upload for reading:', id)
+    
     if (!id) return res.status(400).json({ error: 'Reading id is required' })
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+
+    console.log('🔵 [blob upload] File received:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.buffer?.length || req.file.size
+    })
 
     let reading
     try {
       reading = await Reading.findById(id)
     } catch (err) {
+      console.error('🔴 [blob upload] Invalid reading ID:', err)
       return res.status(400).json({ error: 'Invalid reading id' })
     }
-    if (!reading) return res.status(404).json({ error: 'Reading not found' })
+    if (!reading) {
+      console.error('🔴 [blob upload] Reading not found:', id)
+      return res.status(404).json({ error: 'Reading not found' })
+    }
 
     // If Vercel Blob configured, upload the in-memory buffer directly
     const VERCEL_BLOB_TOKEN = process.env.VERCEL_BLOB_TOKEN || process.env.VERCEL_STORAGE_TOKEN
@@ -670,8 +767,9 @@ router.post('/:id/blob/upload', memoryUpload.single('image'), async (req, res) =
         console.log(`🟢 Backend: Vercel Blob upload successful - URL: ${blob.url}`)
         
         reading.image = blob.url
-        await reading.save()
-        return res.json({ success: true, image: blob.url, url: blob.url, blob })
+        const updatedReading = await reading.save()
+        console.log(`🟢 Backend: Reading ${id} updated with image URL: ${blob.url}`)
+        return res.json({ success: true, image: blob.url, url: blob.url, blob, reading: updatedReading })
       } catch (err) {
         console.error('🔴 Backend: Vercel Blob upload failed:', err)
         return res.status(500).json({ error: 'Blob upload failed', details: err.message })
