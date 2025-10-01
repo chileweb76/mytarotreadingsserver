@@ -426,7 +426,7 @@ router.delete('/:id', passport.authenticate('jwt', { session: false }), async (r
 })
 
 // POST /api/readings - Save a new reading
-router.post('/', async (req, res) => {
+router.post('/', passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
     const {
       querent,
@@ -446,9 +446,13 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'dateTime is required' })
     }
 
-  // Prefer authenticated user id if available (passport may have set req.user)
-  const effectiveUserId = (req.user && (req.user.id || req.user._id)) || userId || req.headers['x-user-id'] || null
+  // Use authenticated user id (passport has set req.user via JWT authentication)
+  const effectiveUserId = req.user ? (req.user.id || req.user._id) : null
   const effectiveUserIdStr = effectiveUserId ? String(effectiveUserId) : null
+
+  if (!effectiveUserId) {
+    return res.status(401).json({ error: 'Authentication required to create readings' })
+  }
 
     // Debug: log full body and effective user for troubleshooting
     try {
