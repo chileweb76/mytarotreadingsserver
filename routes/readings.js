@@ -654,12 +654,23 @@ router.post('/:id/blob/upload', memoryUpload.single('image'), async (req, res) =
         const ext = path.extname(req.file.originalname) || '.jpg'
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`
         const blobPath = `readings/${id}/${fileName}`
-        const blob = await put(blobPath, req.file.buffer, { access: 'public', contentType: req.file.mimetype })
+        
+        console.log(`🔵 Backend: Uploading to Vercel Blob - path: ${blobPath}, size: ${req.file.buffer.length}`)
+        
+        const blob = await put(blobPath, req.file.buffer, { 
+          access: 'public', 
+          contentType: req.file.mimetype,
+          token: VERCEL_BLOB_TOKEN
+        })
+        
+        console.log(`🟢 Backend: Vercel Blob upload successful - URL: ${blob.url}`)
+        
         reading.image = blob.url
         await reading.save()
         return res.json({ success: true, image: blob.url, url: blob.url, blob })
       } catch (err) {
-        // fall through to disk fallback
+        console.error('🔴 Backend: Vercel Blob upload failed:', err)
+        return res.status(500).json({ error: 'Blob upload failed', details: err.message })
       }
     }
 
