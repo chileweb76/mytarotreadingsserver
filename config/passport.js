@@ -222,6 +222,14 @@ if (process.env.JWT_SECRET && process.env.JWT_SECRET !== 'your-super-secret-jwt-
   module.exports.customJWTAuth = customJWTAuth
 } else {
   console.log('⚠️  JWT_SECRET not configured properly - please set a strong secret in .env file')
+  
+  // Provide fallback middleware when JWT is not configured
+  const fallbackJWTAuth = (req, res, next) => {
+    console.error('JWT authentication not configured - JWT_SECRET missing')
+    return res.status(500).json({ error: 'Authentication service not configured' })
+  }
+  
+  module.exports.customJWTAuth = fallbackJWTAuth
 }
 
 module.exports = passport
