@@ -425,8 +425,11 @@ router.delete('/:id', passport.authenticate('jwt', { session: false }), async (r
   }
 })
 
-// POST /api/readings - Save a new reading
-router.post('/', passport.authenticate('jwt', { session: false }), async (req, res) => {
+// Import custom JWT auth as fallback
+const { customJWTAuth } = require('../config/passport')
+
+// POST /api/readings - Save a new reading - Use custom JWT auth to handle Vercel issues
+router.post('/', customJWTAuth, async (req, res) => {
   try {
     const {
       querent,

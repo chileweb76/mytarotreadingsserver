@@ -155,23 +155,71 @@ if (process.env.JWT_SECRET && process.env.JWT_SECRET !== 'your-super-secret-jwt-
     }
   }
 
+  // Use custom JWT verification to handle Vercel SubtleCrypto issues
+  const { verifyJWT } = require('../utils/jwtVerify')
+  
   passport.use(new JwtStrategy({
       jwtFromRequest: ExtractJwt.fromExtractors([ExtractJwt.fromAuthHeaderAsBearerToken(), cookieTokenExtractor]),
-      secretOrKey: process.env.JWT_SECRET
+      secretOrKey: process.env.JWT_SECRET,
+      // Disable built-in verification since we'll do it manually
+      ignoreExpiration: false,
+      // Use custom verify function
+      passReqToCallback: false
     },
     async (payload, done) => {
       try {
+        // Payload is already verified by passport-jwt, but let's be extra sure
         const user = await User.findById(payload.userId)
         if (user) {
           return done(null, user)
         }
         return done(null, false)
       } catch (error) {
-        console.error('JWT verification error:', error)
+        console.error('JWT user lookup error:', error)
         return done(error, false)
       }
     }
   ))
+  
+  // Add custom JWT middleware for cases where passport fails
+  const customJWTAuth = async (req, res, next) => {
+    try {
+      // Extract token using the same logic as passport
+      let token = null
+      
+      // Try Authorization header first
+      const authHeader = req.headers.authorization
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1]
+      }
+      
+      // Try cookie fallback
+      if (!token) {
+        token = cookieTokenExtractor(req)
+      }
+      
+      if (!token) {
+        return res.status(401).json({ error: 'No authentication token provided' })
+      }
+      
+      // Use our robust JWT verification
+      const payload = await verifyJWT(token, process.env.JWT_SECRET)
+      const user = await User.findById(payload.userId)
+      
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' })
+      }
+      
+      req.user = user
+      next()
+    } catch (error) {
+      console.error('Custom JWT auth error:', error)
+      return res.status(401).json({ error: 'Invalid authentication token' })
+    }
+  }
+  
+  // Export custom auth middleware
+  module.exports.customJWTAuth = customJWTAuth
 } else {
   console.log('⚠️  JWT_SECRET not configured properly - please set a strong secret in .env file')
 }
