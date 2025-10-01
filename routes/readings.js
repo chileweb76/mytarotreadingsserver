@@ -56,6 +56,64 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }) // 5MB
 // Memory-based upload for direct Vercel Blob streaming
 const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
 
+// Middleware function to handle authentication fallback
+const authenticateUser = async (req, res, next) => {
+  try {
+    // Try passport JWT first
+    passport.authenticate('jwt', { session: false })(req, res, (err) => {
+      if (!err && req.user) {
+        return next()
+      }
+      
+      // If passport fails, try custom JWT auth as fallback
+      console.warn('🟡 Passport JWT failed, trying custom auth fallback')
+      
+      // Extract token manually
+      let token = null
+      const authHeader = req.headers.authorization
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1]
+      }
+      
+      // Try cookie fallback
+      if (!token && req.headers.cookie) {
+        const cookieMatch = req.headers.cookie.match(/token=([^;]+)/)
+        if (cookieMatch) {
+          token = decodeURIComponent(cookieMatch[1])
+        }
+      }
+      
+      if (!token) {
+        return res.status(401).json({ error: 'No authentication token provided' })
+      }
+      
+      // Use fallback JWT verification
+      try {
+        const { verifyJWT } = require('../utils/jwtVerify')
+        verifyJWT(token, process.env.JWT_SECRET).then(async (payload) => {
+          const User = require('../models/User')
+          const user = await User.findById(payload.userId)
+          if (user) {
+            req.user = user
+            return next()
+          } else {
+            return res.status(401).json({ error: 'User not found' })
+          }
+        }).catch((jwtError) => {
+          console.error('🔴 Custom JWT verification failed:', jwtError)
+          return res.status(401).json({ error: 'Invalid authentication token' })
+        })
+      } catch (customError) {
+        console.error('🔴 Custom auth fallback failed:', customError)
+        return res.status(401).json({ error: 'Authentication failed' })
+      }
+    })
+  } catch (error) {
+    console.error('🔴 Authentication middleware error:', error)
+    return res.status(500).json({ error: 'Authentication service error' })
+  }
+}
+
 // Sample tarot cards data
 const tarotCards = [
   { name: 'The Fool', meaning: 'new beginnings, spontaneity, innocence' },
@@ -144,45 +202,20 @@ router.get('/history', async (req, res) => {
 })
 
 // Check authentication status
-router.get('/auth/check', (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '')
-  
-  if (!token) {
-    return res.status(401).json({ 
-      authenticated: false, 
-      message: 'No token provided' 
-    })
-  }
-  
-  // Verify token using passport JWT
-  passport.authenticate('jwt', { session: false }, (err, user, info) => {
-    if (err) {
-      return res.status(500).json({ 
-        authenticated: false, 
-        message: 'Token verification error' 
-      })
-    }
-    
-    if (!user) {
-      return res.status(401).json({ 
-        authenticated: false, 
-        message: info?.message || 'Invalid token' 
-      })
-    }
-    
-    res.json({ 
-      authenticated: true, 
-      user: { 
-        id: user.id, 
-        email: user.email, 
-        name: user.name 
-      } 
-    })
-  })(req, res)
+router.get('/auth/check', authenticateUser, (req, res) => {
+  // If we get here, authentication was successful
+  res.json({ 
+    authenticated: true, 
+    user: { 
+      id: req.user.id || req.user._id, 
+      email: req.user.email, 
+      name: req.user.name || req.user.username 
+    } 
+  })
 })
 
 // GET /api/readings/user - Get user's reading history (with proper JWT auth)
-router.get('/user', passport.authenticate('jwt', { session: false }), async (req, res) => {
+router.get('/user', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.id || req.user._id
     
@@ -209,7 +242,7 @@ router.get('/user', passport.authenticate('jwt', { session: false }), async (req
 })
 
 // GET /api/readings/:id - Get a single reading by ID
-router.get('/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
+router.get('/:id', authenticateUser, async (req, res) => {
   try {
     const { id } = req.params
     const userId = req.user?.id || req.headers['x-user-id']
@@ -394,7 +427,7 @@ router.put('/:id', authenticateUser, async (req, res) => {
 })
 
 // DELETE /api/readings/:id - Delete a reading
-router.delete('/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
+router.delete('/:id', authenticateUser, async (req, res) => {
   try {
     const { id } = req.params
     const userId = req.user?.id || req.headers['x-user-id']
@@ -424,64 +457,6 @@ router.delete('/:id', passport.authenticate('jwt', { session: false }), async (r
     res.status(500).json({ error: 'Failed to delete reading' })
   }
 })
-
-// Middleware function to handle authentication fallback
-const authenticateUser = async (req, res, next) => {
-  try {
-    // Try passport JWT first
-    passport.authenticate('jwt', { session: false })(req, res, (err) => {
-      if (!err && req.user) {
-        return next()
-      }
-      
-      // If passport fails, try custom JWT auth as fallback
-      console.warn('🟡 Passport JWT failed, trying custom auth fallback')
-      
-      // Extract token manually
-      let token = null
-      const authHeader = req.headers.authorization
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.split(' ')[1]
-      }
-      
-      // Try cookie fallback
-      if (!token && req.headers.cookie) {
-        const cookieMatch = req.headers.cookie.match(/token=([^;]+)/)
-        if (cookieMatch) {
-          token = decodeURIComponent(cookieMatch[1])
-        }
-      }
-      
-      if (!token) {
-        return res.status(401).json({ error: 'No authentication token provided' })
-      }
-      
-      // Use fallback JWT verification
-      try {
-        const { verifyJWT } = require('../utils/jwtVerify')
-        verifyJWT(token, process.env.JWT_SECRET).then(async (payload) => {
-          const User = require('../models/User')
-          const user = await User.findById(payload.userId)
-          if (user) {
-            req.user = user
-            return next()
-          } else {
-            return res.status(401).json({ error: 'User not found' })
-          }
-        }).catch((jwtError) => {
-          console.error('🔴 Custom JWT verification failed:', jwtError)
-          return res.status(401).json({ error: 'Invalid authentication token' })
-        })
-      } catch (customError) {
-        console.error('🔴 Custom auth fallback failed:', customError)
-        return res.status(401).json({ error: 'Authentication failed' })
-      }
-    })
-  } catch (error) {
-    console.error('🔴 Authentication middleware error:', error)
-    return res.status(500).json({ error: 'Authentication service error' })
-  }
-}
 
 // POST /api/readings - Save a new reading - Require authentication
 router.post('/', authenticateUser, async (req, res) => {
@@ -670,7 +645,7 @@ router.post('/', authenticateUser, async (req, res) => {
 })
 
 // Upload a reading image (auth optional but recommended) -> returns web-accessible URL
-router.post('/:id/image', passport.authenticate('jwt', { session: false }), upload.single('image'), async (req, res) => {
+router.post('/:id/image', authenticateUser, upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params
     if (!id) return res.status(400).json({ error: 'Reading id is required' })
