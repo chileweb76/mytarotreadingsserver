@@ -697,30 +697,46 @@ router.post('/:id/image', authenticateUser, upload.single('image'), async (req, 
 // Handle OPTIONS preflight for blob upload
 router.options('/:id/blob/upload', (req, res) => {
   const origin = req.headers.origin
-  if (origin && (origin.includes('vercel.app') || origin.includes('localhost'))) {
-    res.setHeader('Access-Control-Allow-Origin', origin)
-    res.setHeader('Access-Control-Allow-Credentials', 'true')
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, User-Agent')
-  }
+  console.log('🔵 [CORS OPTIONS] Origin:', origin)
+  
+  // Set comprehensive CORS headers for all Vercel domains and localhost
+  res.setHeader('Access-Control-Allow-Origin', origin || '*')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store')
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id')
+  res.setHeader('Vary', 'Origin')
+  
+  console.log('🟢 [CORS OPTIONS] Headers set for blob upload')
   res.status(200).end()
 })
 
 router.post('/:id/blob/upload', (req, res, next) => {
-  // Add CORS headers for blob upload
+  // Add comprehensive CORS headers for blob upload
   const origin = req.headers.origin
-  if (origin && (origin.includes('vercel.app') || origin.includes('localhost'))) {
-    res.setHeader('Access-Control-Allow-Origin', origin)
-    res.setHeader('Access-Control-Allow-Credentials', 'true')
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, User-Agent')
-  }
+  console.log('🔵 [CORS POST] Origin:', origin)
+  
+  // Set comprehensive CORS headers for all requests
+  res.setHeader('Access-Control-Allow-Origin', origin || '*')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store')
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id')
+  res.setHeader('Vary', 'Origin')
+  
+  console.log('🟢 [CORS POST] Headers set for blob upload')
   next()
 }, memoryUpload.single('image'), async (req, res) => {
   try {
     const { id } = req.params
     
     console.log('🔵 [blob upload] Starting upload for reading:', id)
+    console.log('🔵 [blob upload] Request headers:', JSON.stringify({
+      origin: req.headers.origin,
+      'content-type': req.headers['content-type'],
+      'user-agent': req.headers['user-agent']?.substring(0, 50),
+      authorization: req.headers.authorization ? 'Bearer [present]' : '[missing]'
+    }, null, 2))
     
     if (!id) return res.status(400).json({ error: 'Reading id is required' })
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
