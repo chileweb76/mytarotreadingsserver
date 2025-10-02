@@ -9,12 +9,14 @@
   ],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store" },
-        { "key": "Access-Control-Allow-Credentials", "value": "true" }
+        { "key": "Access-Control-Allow-Origin", "value": "https://mytarotreadings.vercel.app" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store, x-reading-id, Cache-Control, Pragma" },
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Expose-Headers", "value": "Content-Length, X-Request-Id" },
+        { "key": "Access-Control-Max-Age", "value": "86400" }
       ]
     }
   ]

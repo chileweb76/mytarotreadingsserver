@@ -13,17 +13,17 @@ const upload = multer({
 })
 
 module.exports = async (req, res) => {
-  // ULTRA-AGGRESSIVE CORS headers - set immediately before any processing
-  const origin = req.headers.origin || 'https://mytarotreadings.vercel.app'
+  // Set proper CORS headers - must match vercel.json configuration
+  const origin = 'https://mytarotreadings.vercel.app'
   
-  // Set ALL possible CORS headers with maximum permissiveness for debugging
-  res.setHeader('Access-Control-Allow-Origin', '*') // Try wildcard first
-  res.setHeader('Access-Control-Allow-Credentials', 'false') // Disable credentials to use wildcard
-  res.setHeader('Access-Control-Allow-Methods', '*') // Allow all methods
-  res.setHeader('Access-Control-Allow-Headers', '*') // Allow all headers
-  res.setHeader('Access-Control-Expose-Headers', '*')
-  res.setHeader('Access-Control-Max-Age', '0') // Disable preflight caching completely
-  res.setHeader('Vary', 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers')
+  // Set headers that work with Access-Control-Allow-Credentials: true
+  res.setHeader('Access-Control-Allow-Origin', origin)
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store, x-reading-id, User-Agent, Cache-Control, Pragma')
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id')
+  res.setHeader('Access-Control-Max-Age', '86400') // Cache preflight for 24 hours
+  res.setHeader('Vary', 'Origin')
   
   // Ultra-aggressive cache busting
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, s-maxage=0')
@@ -39,10 +39,10 @@ module.exports = async (req, res) => {
   console.log(`🔥 [FINAL UPLOAD ${timestamp}] User-Agent: ${req.headers['user-agent']?.substring(0, 100)}`)
   
   if (req.method === 'OPTIONS') {
-    console.log(`🟢 [FINAL UPLOAD ${timestamp}] OPTIONS preflight handled with wildcard CORS`)
+    console.log(`🟢 [FINAL UPLOAD ${timestamp}] OPTIONS preflight handled with proper CORS`)
     return res.status(200).json({ 
       success: true, 
-      message: 'FINAL CORS preflight OK with wildcard headers',
+      message: 'FINAL CORS preflight OK with credentials support',
       timestamp: timestamp,
       cacheId: `final-${Date.now()}-${Math.random()}`
     })
