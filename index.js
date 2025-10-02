@@ -361,10 +361,18 @@ try {
   // ignore
 }
 
+// Always add the frontend URL to allowed origins
+const frontendUrl = 'https://mytarotreadings.vercel.app'
+if (allowedOrigins.indexOf(frontendUrl) === -1) {
+  allowedOrigins.push(frontendUrl)
+}
+
 if (process.env.NODE_ENV !== 'production') {
   const local = normalizeOrigin('http://localhost:3000')
   if (local && allowedOrigins.indexOf(local) === -1) allowedOrigins.push(local)
 }
+
+console.log('🔵 [CORS Setup] Allowed origins:', allowedOrigins)
 
 // Temporary debugging middleware: echo the Origin header for allowed
 // origins and for Vercel-assigned subdomains (*.vercel.app). This helps
@@ -380,8 +388,12 @@ app.use((req, res, next) => {
     // If the origin is explicitly allowed, echo it so credentialed
     // requests succeed.
     if (allowedOrigins && allowedOrigins.indexOf(origin) !== -1) {
+      console.log('🟢 [CORS Main] Allowed origin:', origin)
       res.setHeader('Access-Control-Allow-Origin', origin)
       res.setHeader('Access-Control-Allow-Credentials', 'true')
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store')
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id')
       try { res.setHeader('Vary', 'Origin') } catch (e) {}
       return next()
     }
@@ -393,8 +405,12 @@ app.use((req, res, next) => {
     try {
       const incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
       if (incomingHost && incomingHost.endsWith('.vercel.app')) {
+        console.log('🟢 [CORS Main] Vercel subdomain allowed:', origin)
         res.setHeader('Access-Control-Allow-Origin', origin)
         res.setHeader('Access-Control-Allow-Credentials', 'true')
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store')
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id')
         try { res.setHeader('Vary', 'Origin') } catch (e) {}
       }
     } catch (e) {
@@ -437,14 +453,29 @@ app.use((req, res, next) => {
     // fallback to wildcard
   }
 
+  console.log('🔵 [OPTIONS Preflight]', { 
+    origin, 
+    allowOrigin, 
+    method: req.method, 
+    path: req.path,
+    requestHeaders: req.headers['access-control-request-headers']
+  })
+  
   res.setHeader('Access-Control-Allow-Origin', allowOrigin)
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin')
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id')
   // Ensure caches/proxies vary by Origin so different origins receive the
   // correct CORS headers, and always send a header the browser can see.
   try { res.setHeader('Vary', 'Origin') } catch (e) {}
   res.setHeader('Access-Control-Max-Age', '3600')
+  
+  console.log('🟢 [OPTIONS Response] Headers set:', {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Credentials': 'true'
+  })
+  
   return res.status(200).end()
 })
 
