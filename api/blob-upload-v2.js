@@ -1,9 +1,9 @@
-const { connectToDatabase } = require('../../../utils/connectToDatabase')
+const { connectToDatabase } = require('../utils/connectToDatabase')
 
 // Try to load centralized cors config, fall back to permissive defaults
 let allowedOrigins = ['http://localhost:3000']
 try {
-  const corsConfig = require('../../../utils/corsConfig')
+  const corsConfig = require('../utils/corsConfig')
   allowedOrigins = corsConfig.allowedOrigins || allowedOrigins
 } catch (e) {
   try { console.error('api/blob-upload-v2 failed to load corsConfig, using fallback', e && e.message) } catch (e2) {}
@@ -70,7 +70,7 @@ module.exports = async (req, res) => {
     req.url = `/api/readings/${readingId}/blob/upload`
     
     // Forward to main Express app
-    const app = require('../../index')
+    const app = require('../index')
     return app(req, res)
   } catch (err) {
     console.error('🔴 [Blob Upload V2] Error:', err)
