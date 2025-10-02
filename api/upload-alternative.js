@@ -2,6 +2,15 @@
  * Alternative blob upload endpoint with completely different naming to bypass any caching
  */
 const { connectToDatabase } = require('../utils/connectToDatabase')
+const { put } = require('@vercel/blob')
+const multer = require('multer')
+const Reading = require('../models/Reading')
+
+// Configure multer for memory storage
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+})
 
 module.exports = async (req, res) => {
   // Set aggressive CORS headers immediately - no middleware dependencies
@@ -36,6 +45,10 @@ module.exports = async (req, res) => {
     })
   }
   
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+  
   try {
     const readingId = req.query.readingId || req.headers['x-reading-id']
     console.log('🔵 [Upload Alternative] Processing upload for reading:', readingId)
@@ -46,18 +59,63 @@ module.exports = async (req, res) => {
     
     await connectToDatabase()
     
-    // Forward to Express app
-    req.params = { id: readingId }
-    req.url = `/api/readings/${readingId}/blob/upload`
-    
-    const app = require('../index')
-    return app(req, res)
+    // Use multer to handle file upload
+    upload.single('file')(req, res, async (err) => {
+      if (err) {
+        console.error('❌ [Upload Alternative] Multer error:', err)
+        return res.status(400).json({ error: 'File upload error: ' + err.message })
+      }
+      
+      if (!req.file) {
+        console.error('❌ [Upload Alternative] No file provided')
+        return res.status(400).json({ error: 'No file provided' })
+      }
+      
+      console.log('🔵 [Upload Alternative] File received:', {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      })
+      
+      try {
+        // Upload to Vercel Blob
+        const filename = `reading-${readingId}-${Date.now()}.${req.file.originalname.split('.').pop()}`
+        const blob = await put(filename, req.file.buffer, {
+          access: 'public',
+          contentType: req.file.mimetype,
+        })
+        
+        console.log('🟢 [Upload Alternative] Blob uploaded:', blob.url)
+        
+        // Update the reading with the image URL
+        const reading = await Reading.findByIdAndUpdate(
+          readingId,
+          { imageUrl: blob.url },
+          { new: true }
+        )
+        
+        if (!reading) {
+          console.error('❌ [Upload Alternative] Reading not found:', readingId)
+          return res.status(404).json({ error: 'Reading not found' })
+        }
+        
+        console.log('🟢 [Upload Alternative] Reading updated successfully')
+        
+        res.status(200).json({
+          success: true,
+          imageUrl: blob.url,
+          readingId: readingId,
+          message: 'Image uploaded successfully via alternative endpoint'
+        })
+        
+      } catch (uploadError) {
+        console.error('❌ [Upload Alternative] Upload error:', uploadError)
+        res.status(500).json({ error: 'Upload failed: ' + uploadError.message })
+      }
+    })
     
   } catch (error) {
-    console.error('🔴 [Upload Alternative] Error:', error)
-    // Ensure CORS headers are set on error
-    res.setHeader('Access-Control-Allow-Origin', origin || 'https://mytarotreadings.vercel.app')
-    res.setHeader('Access-Control-Allow-Credentials', 'true')
-    return res.status(500).json({ error: 'Server error', details: error.message })
+    console.error('❌ [Upload Alternative] Unexpected error:', error)
+    res.status(500).json({ error: 'Something went wrong!' })
   }
 }
