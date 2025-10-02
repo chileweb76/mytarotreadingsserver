@@ -25,6 +25,10 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store');
     res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id');
     res.setHeader('Vary', 'Origin');
+    // Prevent caching of CORS responses to avoid stale CORS errors
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
   } catch (e) {
     // ignore header setting failures
   }

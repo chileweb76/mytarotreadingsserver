@@ -466,14 +466,19 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
   res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id')
+  // Prevent caching of CORS preflight responses to avoid stale CORS errors
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
   // Ensure caches/proxies vary by Origin so different origins receive the
   // correct CORS headers, and always send a header the browser can see.
   try { res.setHeader('Vary', 'Origin') } catch (e) {}
-  res.setHeader('Access-Control-Max-Age', '3600')
+  res.setHeader('Access-Control-Max-Age', '0') // Don't cache preflight
   
   console.log('🟢 [OPTIONS Response] Headers set:', {
     'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Credentials': 'true'
+    'Access-Control-Allow-Credentials': 'true',
+    'Cache-Control': 'no-cache, no-store, must-revalidate'
   })
   
   return res.status(200).end()
