@@ -453,8 +453,11 @@ router.post('/login', async (req, res) => {
     const isProd = process.env.NODE_ENV === 'production'
     const cookieOptions = {
       httpOnly: true,
-      secure: isProd, // secure in production
-      sameSite: 'none', // allow cross-site cookies when front-end is on different origin
+      // Only set Secure and SameSite=None in production. Browsers will reject
+      // SameSite=None cookies that are not Secure. Use 'lax' in development so
+      // local testing (http://localhost) works without Secure.
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     }
 
