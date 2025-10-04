@@ -23,6 +23,130 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } })
 
+// GET /api/decks - Get all decks (global and user-owned)
+router.get('/', (req, res, next) => {
+  // Try to authenticate, but don't fail if no auth
+  passport.authenticate('jwt', { session: false }, (err, user) => {
+    if (user) req.user = user
+    next()
+  })(req, res, next)
+}, async (req, res) => {
+  try {
+    let query = {}
+    
+    // If user is authenticated, get both global and user decks
+    if (req.user) {
+      query = {
+        $or: [
+          { owner: req.user._id },
+          { owner: null },
+          { owner: 'global' },
+          { isGlobal: true }
+        ]
+      }
+    } else {
+      // If not authenticated, only get global decks
+      query = {
+        $or: [
+          { owner: null },
+          { owner: 'global' },
+          { isGlobal: true }
+        ]
+      }
+    }
+
+    const decks = await Deck.find(query).sort({ deckName: 1 })
+    
+    // Normalize deck data
+    const normalizedDecks = decks.map(deck => ({
+      _id: deck._id.toString(),
+      deckName: deck.deckName,
+      description: deck.description,
+      image: deck.image,
+      owner: deck.owner ? deck.owner.toString() : null,
+      isGlobal: !deck.owner || deck.owner === 'global' || deck.isGlobal === true,
+      cardCount: deck.cards ? deck.cards.length : 0,
+      createdAt: deck.createdAt,
+      updatedAt: deck.updatedAt
+    }))
+
+    res.json({ success: true, decks: normalizedDecks })
+  } catch (err) {
+    console.error('Error fetching decks:', err)
+    res.status(500).json({ error: 'Failed to fetch decks' })
+  }
+})
+
+// GET /api/decks/global - Get only global decks (no auth required)
+router.get('/global', async (req, res) => {
+  try {
+    const decks = await Deck.find({
+      $or: [
+        { owner: null },
+        { owner: 'global' },
+        { isGlobal: true }
+      ]
+    }).sort({ deckName: 1 })
+
+    const normalizedDecks = decks.map(deck => ({
+      _id: deck._id.toString(),
+      deckName: deck.deckName,
+      description: deck.description,
+      image: deck.image,
+      owner: null,
+      isGlobal: true,
+      cardCount: deck.cards ? deck.cards.length : 0,
+      createdAt: deck.createdAt,
+      updatedAt: deck.updatedAt
+    }))
+
+    res.json({ success: true, decks: normalizedDecks })
+  } catch (err) {
+    console.error('Error fetching global decks:', err)
+    res.status(500).json({ error: 'Failed to fetch global decks' })
+  }
+})
+
+// GET /api/decks/:id - Get a specific deck with cards
+router.get('/:id', (req, res, next) => {
+  // Try to authenticate, but don't fail if no auth
+  passport.authenticate('jwt', { session: false }, (err, user) => {
+    if (user) req.user = user
+    next()
+  })(req, res, next)
+}, async (req, res) => {
+  try {
+    const deck = await Deck.findById(req.params.id)
+    if (!deck) {
+      return res.status(404).json({ error: 'Deck not found' })
+    }
+
+    // Check permissions - global decks are always accessible
+    if (deck.owner && deck.owner !== 'global' && !deck.isGlobal) {
+      if (!req.user || deck.owner.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+    }
+
+    const normalizedDeck = {
+      _id: deck._id.toString(),
+      deckName: deck.deckName,
+      description: deck.description,
+      image: deck.image,
+      owner: deck.owner ? deck.owner.toString() : null,
+      isGlobal: !deck.owner || deck.owner === 'global' || deck.isGlobal === true,
+      cards: deck.cards || [],
+      createdAt: deck.createdAt,
+      updatedAt: deck.updatedAt
+    }
+
+    res.json({ success: true, deck: normalizedDeck })
+  } catch (err) {
+    console.error('Error fetching deck:', err)
+    res.status(500).json({ error: 'Failed to fetch deck' })
+  }
+})
+
 // Upload a card image for a deck
 router.post('/:deckId/card/:cardName/upload', upload.single('card'), async (req, res) => {
   try {
