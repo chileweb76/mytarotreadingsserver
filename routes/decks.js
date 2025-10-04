@@ -40,7 +40,7 @@ router.get('/', (req, res, next) => {
         $or: [
           { owner: req.user._id },
           { owner: null },
-          { owner: 'global' },
+          { owner: { $exists: false } },
           { isGlobal: true }
         ]
       }
@@ -49,7 +49,7 @@ router.get('/', (req, res, next) => {
       query = {
         $or: [
           { owner: null },
-          { owner: 'global' },
+          { owner: { $exists: false } },
           { isGlobal: true }
         ]
       }
@@ -64,7 +64,7 @@ router.get('/', (req, res, next) => {
       description: deck.description,
       image: deck.image,
       owner: deck.owner ? deck.owner.toString() : null,
-      isGlobal: !deck.owner || deck.owner === 'global' || deck.isGlobal === true,
+      isGlobal: !deck.owner || deck.isGlobal === true,
       cardCount: deck.cards ? deck.cards.length : 0,
       createdAt: deck.createdAt,
       updatedAt: deck.updatedAt
@@ -83,7 +83,7 @@ router.get('/global', async (req, res) => {
     const decks = await Deck.find({
       $or: [
         { owner: null },
-        { owner: 'global' },
+        { owner: { $exists: false } },
         { isGlobal: true }
       ]
     }).sort({ deckName: 1 })
@@ -122,7 +122,7 @@ router.get('/:id', (req, res, next) => {
     }
 
     // Check permissions - global decks are always accessible
-    if (deck.owner && deck.owner !== 'global' && !deck.isGlobal) {
+    if (deck.owner && !deck.isGlobal) {
       if (!req.user || deck.owner.toString() !== req.user._id.toString()) {
         return res.status(403).json({ error: 'Access denied' })
       }
@@ -134,7 +134,7 @@ router.get('/:id', (req, res, next) => {
       description: deck.description,
       image: deck.image,
       owner: deck.owner ? deck.owner.toString() : null,
-      isGlobal: !deck.owner || deck.owner === 'global' || deck.isGlobal === true,
+      isGlobal: !deck.owner || deck.isGlobal === true,
       cards: deck.cards || [],
       createdAt: deck.createdAt,
       updatedAt: deck.updatedAt
