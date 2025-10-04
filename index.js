@@ -654,6 +654,16 @@ app.get('/auth/verify', (req, res) => {
   return res.redirect(`/api/auth/verify?token=${encodeURIComponent(token)}`)
 })
 
+// Redirect Google OAuth routes to API endpoints
+app.get('/auth/google', (req, res) => {
+  return res.redirect('/api/auth/google')
+})
+
+app.get('/auth/google/callback', (req, res) => {
+  const queryString = new URL(`http://dummy${req.url}`).search
+  return res.redirect(`/api/auth/google/callback${queryString}`)
+})
+
 // Lightweight root handler: redirect to the configured client URL when present,
 // otherwise return a small JSON payload so `GET /` doesn't 404 during local
 // development or quick checks.
