@@ -9,7 +9,7 @@ module.exports = async (req, res) => {
     const origin = req.headers.origin;
     const requestHost = req.headers.host;
     
-    console.log('API catch-all handling:', req.method, req.url, 'Origin:', origin); // Debug log
+    // Debug log removed; // Debug log
     
     // Always set CORS headers for all requests
     res.setHeader('Access-Control-Allow-Origin', origin && allowedOrigins.includes(origin) ? origin : '*');
@@ -21,8 +21,8 @@ module.exports = async (req, res) => {
 
     // Handle CORS testing endpoint (replaces cors-test.js)
     if (req.url === '/cors-test' || req.url === '/api/cors-test') {
-      console.log('CORS test - Method:', req.method, 'Origin:', origin);
-      console.log('Allowed origins:', allowedOrigins);
+      // Debug log removed;
+      // Debug log removed;
       
       if (req.method === 'OPTIONS') {
         return res.status(200).end();

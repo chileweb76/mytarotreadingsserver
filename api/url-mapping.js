@@ -65,7 +65,7 @@ module.exports = async (req, res) => {
       }
     });
     
-    console.log(`URL Mapping: Generated ${Object.keys(mapping).length} mappings`);
+    // Debug log removed.length} mappings`);
     
     res.json({
       success: true,

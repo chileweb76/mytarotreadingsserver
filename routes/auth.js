@@ -81,7 +81,7 @@ router.post('/register', async (req, res) => {
   try {
     // Helpful debug: log the incoming body shape when developing
     if (process.env.NODE_ENV !== 'production') {
-      try { console.log('Register body:', JSON.stringify(req.body)) } catch (e) {}
+      // Debug logging removed for production
     }
     const { username, email: rawEmail, password, verifyPassword } = req.body
     const email = rawEmail && rawEmail.toString().trim().toLowerCase()
