@@ -17,25 +17,20 @@ try {
 module.exports = async (req, res) => {
   const origin = req.headers.origin;
 
-  // Defensive CORS headers (allow origin passed or fallback to wildcard)
-  try {
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id');
-    res.setHeader('Vary', 'Origin');
-    // Prevent caching of CORS responses to avoid stale CORS errors
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-  } catch (e) {
-    // ignore header setting failures
-  }
+  // IMMEDIATELY set CORS headers before anything else
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin, x-vercel-blob-store');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id');
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
 
-  // Short-circuit preflight requests early
+  // Short-circuit preflight requests IMMEDIATELY
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return res.status(204).end();
   }
 
   try {
@@ -48,8 +43,11 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     console.error('Catch-all handler error:', error);
-    // If preflight, return 200; otherwise return 500
-    if (req.method === 'OPTIONS') return res.status(200).end();
+    // Ensure CORS headers are still set on error responses
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    // If preflight, return 204; otherwise return 500
+    if (req.method === 'OPTIONS') return res.status(204).end();
     return res.status(500).json({ error: 'Internal server error', message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong' });
   }
 };
