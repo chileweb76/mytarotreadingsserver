@@ -3,6 +3,17 @@ const router = express.Router()
 const Spread = require('../models/Spread')
 const passport = require('passport')
 
+// Handle OPTIONS preflight for CORS
+router.options('*', (req, res) => {
+  const origin = req.headers.origin || '*'
+  res.setHeader('Access-Control-Allow-Origin', origin)
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, X-Requested-With, Accept, Origin')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Access-Control-Max-Age', '3600')
+  return res.status(204).end()
+})
+
 // Create a new spread (public for now; can be protected later)
 router.post('/', passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
@@ -28,6 +39,11 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
 // Get all spreads
 router.get('/', async (req, res) => {
   try {
+    // Ensure CORS headers are set
+    const origin = req.headers.origin || '*'
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    
     const spreads = await Spread.find({}).sort({ spread: 1 })
     res.json(spreads)
   } catch (err) {
@@ -39,16 +55,15 @@ router.get('/', async (req, res) => {
 // Get spread by id
 router.get('/:id', async (req, res) => {
   try {
-    // Debug: log incoming request for troubleshooting 404s seen in production
-    try {
-      console.debug('spreads: GET /api/spreads/:id called', { id: req.params.id, url: req && req.originalUrl, origin: req && req.headers && req.headers.origin })
-    } catch (e) {}
+    // Ensure CORS headers are set
+    const origin = req.headers.origin || '*'
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    
     const spread = await Spread.findById(req.params.id)
     if (!spread) {
-      try { console.debug('spreads: findById returned null for id', req.params.id) } catch (e) {}
       return res.status(404).json({ error: 'Spread not found' })
     }
-    try { console.debug('spreads: found spread', { id: spread._id }) } catch (e) {}
     res.json(spread)
   } catch (err) {
     console.error('Error fetching spread', err)
