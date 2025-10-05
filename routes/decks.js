@@ -367,6 +367,45 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
   }
 })
 
+// Update deck name and description (protected)
+router.patch('/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  try {
+    const { id } = req.params
+    const { deckName, description } = req.body
+    
+    const deck = await Deck.findById(id)
+    if (!deck) return res.status(404).json({ error: 'Deck not found' })
+
+    // Check if this is the Rider-Waite deck - prevent editing
+    if (deck.deckName === 'Rider-Waite Tarot Deck') {
+      return res.status(403).json({ error: 'Rider-Waite Tarot deck cannot be edited' })
+    }
+
+    // If deck has an owner, only allow the owner to update
+    if (deck.owner) {
+      const ownerId = deck.owner.toString()
+      const userId = req.user && (req.user.id || req.user._id) ? (req.user.id || req.user._id).toString() : null
+      if (!userId || ownerId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to update this deck' })
+      }
+    }
+
+    // Update fields if provided
+    if (deckName !== undefined && deckName.trim()) {
+      deck.deckName = deckName.trim()
+    }
+    if (description !== undefined) {
+      deck.description = description
+    }
+
+    await deck.save()
+    res.json({ success: true, deck })
+  } catch (err) {
+    console.error('Error updating deck', err)
+    res.status(500).json({ error: 'Failed to update deck' })
+  }
+})
+
 // Delete a deck by id (protected)
 async function deleteDeckHandler(req, res) {
   try {
