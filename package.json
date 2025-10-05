@@ -5,13 +5,14 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-  "seed:public": "node scripts/seedSpreadsBlob.js",
-  "seed:rider-waite": "node scripts/seed_rider_waite_local.js",
+    "seed:public": "node scripts/seedSpreadsBlob.js",
+    "seed:rider-waite": "node scripts/seed_rider_waite_local.js",
     "seed:spreads": "node scripts/seedSpreadsBlob.js",
-  "test:spreads": "node scripts/testSpreads.js",
+    "test:spreads": "node scripts/testSpreads.js",
     "test": "jest --runInBand"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^140.0.0",
     "@vercel/blob": "^2.0.0",
     "@vercel/functions": "^3.1.0",
     "bcryptjs": "^3.0.2",
@@ -28,7 +29,7 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
-    "playwright": "^1.44.0",
+    "puppeteer-core": "^24.23.0",
     "superagent": "^10.2.3"
   },
   "optionalDependencies": {
