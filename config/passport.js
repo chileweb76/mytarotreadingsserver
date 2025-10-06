@@ -18,9 +18,6 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     || (process.env.SERVER_URL ? `${process.env.SERVER_URL.replace(/\/$/, '')}/api/auth/google/callback` :
         (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, '')}/api/auth/google/callback` :
          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/\/$/, '')}/api/auth/google/callback` : '/api/auth/google/callback')))
-  // Helpful debug: print the callback URL so you can confirm what Passport
-  // will send to Google. This shows up in Vercel function logs on startup.
-  try { console.log('Google OAuth callbackURL:', callbackUrl) } catch (e) {}
 
   passport.use(new GoogleStrategy({
       clientID: process.env.GOOGLE_CLIENT_ID,

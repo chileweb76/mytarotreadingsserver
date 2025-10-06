@@ -428,9 +428,14 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' })
     }
 
-    // Require email verification for local accounts
-    if (!user.isEmailVerified) {
-      return res.status(403).json({ error: 'Please verify your email before logging in' })
+    // Require email verification for local accounts (strict check)
+    if (user.isEmailVerified !== true) {
+      console.warn('Login blocked for unverified user:', user.email, 'isEmailVerified:', user.isEmailVerified)
+      return res.status(403).json({ 
+        error: 'Please verify your email before logging in',
+        email: user.email,
+        resendVerification: true
+      })
     }
 
     // Block login for soft-deleted accounts
