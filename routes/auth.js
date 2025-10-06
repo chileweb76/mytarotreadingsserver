@@ -169,6 +169,10 @@ router.post('/register', async (req, res) => {
         // Log the error so we can see why sends fail in server logs.
         console.error('Failed to send verification email during registration:', err && err.stack ? err.stack : err)
       }
+    } else {
+      // Warn if Courier is not configured so admins know emails won't be sent
+      console.warn('⚠️  Courier not configured - verification email NOT sent for:', email)
+      console.warn('   Set COURIER_AUTH_TOKEN and COURIER_VERIFY_TEMPLATE_ID environment variables to enable email verification')
     }
 
     // Do NOT issue JWT until email is verified
