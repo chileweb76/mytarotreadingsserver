@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const Spread = require('../models/Spread')
 const passport = require('passport')
+const logger = require('../lib/logger')
 
 // CORS middleware for ALL spreads routes
 router.use((req, res, next) => {
@@ -50,7 +51,7 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
     await doc.save()
     res.status(201).json(doc)
   } catch (err) {
-    console.error('Error creating spread', err)
+    logger.error('Error creating spread', err)
     res.status(500).json({ error: 'Failed to create spread' })
   }
 })
@@ -61,7 +62,7 @@ router.get('/', async (req, res) => {
     const spreads = await Spread.find({}).sort({ spread: 1 })
     res.json(spreads)
   } catch (err) {
-    console.error('Error fetching spreads', err)
+    logger.error('Error fetching spreads', err)
     res.status(500).json({ error: 'Failed to fetch spreads' })
   }
 })
@@ -75,7 +76,7 @@ router.get('/:id', async (req, res) => {
     }
     res.json(spread)
   } catch (err) {
-    console.error('Error fetching spread', err)
+    logger.error('Error fetching spread', err)
     res.status(500).json({ error: 'Failed to fetch spread' })
   }
 })
@@ -89,7 +90,7 @@ router.get('/by-name', async (req, res) => {
     if (!spread) return res.status(404).json({ error: 'Spread not found' })
     res.json(spread)
   } catch (err) {
-    console.error('Error fetching spread by name', err)
+    logger.error('Error fetching spread by name', err)
     res.status(500).json({ error: 'Failed to fetch spread' })
   }
 })
@@ -116,7 +117,7 @@ router.delete('/:id', passport.authenticate('jwt', { session: false }), async (r
     await Spread.findByIdAndDelete(id)
     res.json({ success: true })
   } catch (err) {
-    console.error('Error deleting spread', err)
+    logger.error('Error deleting spread', err)
     res.status(500).json({ error: 'Failed to delete spread' })
   }
 })

@@ -364,15 +364,14 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
 
     const cardsToSave = Array.isArray(cards) && cards.length ? cards : defaultCards.map(name => ({ name, image: '' }))
 
-  const owner = req.user && (req.user.id || req.user._id) ? (req.user.id || req.user._id) : null
-  const deckData = { deckName, description, cards: cardsToSave }
-  if (owner) deckData.owner = owner
+    const deckData = { deckName, description, cards: cardsToSave }
+    if (owner) deckData.owner = owner
 
-  const deck = new Deck(deckData)
+    const deck = new Deck(deckData)
     await deck.save()
     res.status(201).json(deck)
   } catch (err) {
-    console.error('Error creating deck', err)
+    logger.error('Error creating deck', err)
     res.status(500).json({ error: 'Failed to create deck' })
   }
 })
