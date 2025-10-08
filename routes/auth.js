@@ -134,6 +134,8 @@ router.post('/register', async (req, res) => {
       const serverBase = buildServerBase(req)
       const verifyUrl = `${serverBase}/api/auth/verify?token=${verificationToken}`
       const clientBase = (process.env.CLIENT_URL || '').replace(/\/$/, '') || ''
+      const verifyExpiresIso = new Date(user.verificationExpires).toISOString()
+      const verifyExpiresMinutes = Math.round((user.verificationExpires - Date.now()) / (60 * 1000))
       const payload = {
         message: {
           to: { email },
@@ -143,7 +145,9 @@ router.post('/register', async (req, res) => {
             site_url: clientBase || serverBase,
             server_base: serverBase,
             verify_url: verifyUrl,
-            verifyUrl: verifyUrl
+            verifyUrl: verifyUrl,
+            verifyExpiresMinutes,
+            verifyExpiresIso
           }
         }
       }
@@ -278,6 +282,8 @@ router.post('/resend', async (req, res) => {
       const serverBase = buildServerBase(req)
       const verifyUrl = `${serverBase}/api/auth/verify?token=${verificationToken}`
       const clientBase = (process.env.CLIENT_URL || '').replace(/\/$/, '') || ''
+      const verifyExpiresIso = new Date(user.verificationExpires).toISOString()
+      const verifyExpiresMinutes = Math.round((user.verificationExpires - Date.now()) / (60 * 1000))
       const payload = {
         message: {
           to: { email },
@@ -287,7 +293,9 @@ router.post('/resend', async (req, res) => {
             site_url: clientBase || serverBase,
             server_base: serverBase,
             verify_url: verifyUrl,
-            verifyUrl: verifyUrl
+            verifyUrl: verifyUrl,
+            verifyExpiresMinutes,
+            verifyExpiresIso
           }
         }
       }
@@ -347,6 +355,8 @@ router.post('/forgot', async (req, res) => {
         const serverBase = `${req.protocol}://${req.get('host')}`
         const clientBase = (process.env.CLIENT_URL || '').replace(/\/$/, '') || ''
         const resetUrl = `${clientBase || serverBase}/auth/reset?token=${resetToken}`
+        const resetExpiresIso = new Date(user.resetPasswordExpires).toISOString()
+        const resetExpiresMinutes = Math.round((user.resetPasswordExpires - Date.now()) / (60 * 1000))
         const payload = {
           message: {
             to: { email },
@@ -356,7 +366,9 @@ router.post('/forgot', async (req, res) => {
               site_url: clientBase || serverBase,
               server_base: serverBase,
               reset_url: resetUrl,
-              resetUrl: resetUrl
+              resetUrl: resetUrl,
+              resetExpiresMinutes,
+              resetExpiresIso
             }
           }
         }
