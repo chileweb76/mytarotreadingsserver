@@ -387,11 +387,13 @@ router.post('/forgot', async (req, res) => {
 router.post('/reset', async (req, res) => {
   try {
     const { token, newPassword, verifyPassword } = req.body
+    try { require('../utils/log').debug('Received reset POST', { tokenSample: token ? token.slice(0,8) + '...' : null }) } catch (e) {}
     if (!token || !newPassword || !verifyPassword) return res.status(400).json({ error: 'Token and new passwords are required' })
     if (newPassword !== verifyPassword) return res.status(400).json({ error: 'Passwords do not match' })
     if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' })
 
     const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpires: { $gt: Date.now() } })
+    try { require('../utils/log').debug('Reset token lookup result', { found: !!user, userId: user && user._id ? user._id.toString() : null }) } catch (e) {}
     if (!user) return res.status(400).json({ error: 'Invalid or expired token' })
 
   // Assign plaintext password and let User.pre('save') hash it once
