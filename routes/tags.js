@@ -3,6 +3,7 @@ const router = express.Router()
 const Tag = require('../models/Tag')
 const passport = require('passport')
 const mongoose = require('mongoose')
+const logger = require('../lib/logger')
 
 // GET /api/tags - Get all tags (global + user's custom tags)
 router.get('/', async (req, res) => {
@@ -35,7 +36,7 @@ router.get('/', async (req, res) => {
 
     return res.json({ ok: true, tags })
   } catch (err) {
-    console.error('Get tags error:', err)
+    logger.error('Get tags error:', err)
     res.status(500).json({ ok: false, error: 'Failed to fetch tags' })
   }
 })
@@ -75,7 +76,7 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
 
     return res.status(201).json({ ok: true, tag })
   } catch (err) {
-    console.error('Create tag error:', err)
+    logger.error('Create tag error:', err)
     return res.status(500).json({ ok: false, error: 'Failed to create tag' })
   }
 })

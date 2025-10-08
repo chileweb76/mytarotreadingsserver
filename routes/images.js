@@ -33,7 +33,8 @@ router.get('/spreads/:id', async (req, res) => {
     
     res.json({ imageUrl: spread.image });
   } catch (error) {
-    console.error('Error serving spread image:', error);
+      const logger = require('../lib/logger');
+      logger.error('Error serving spread image:', error);
     res.status(500).json({ error: 'Failed to serve spread image' });
   }
 });
@@ -65,7 +66,7 @@ router.get('/decks/:id/cover', async (req, res) => {
     
     res.json({ imageUrl: deck.image });
   } catch (error) {
-    console.error('Error serving deck cover image:', error);
+      logger.error('Error serving deck cover image:', error);
     res.status(500).json({ error: 'Failed to serve deck cover image' });
   }
 });
@@ -100,7 +101,7 @@ router.get('/decks/:id/cards/:cardName', async (req, res) => {
     
     res.json({ imageUrl: card.image });
   } catch (error) {
-    console.error('Error serving card image:', error);
+      logger.error('Error serving card image:', error);
     res.status(500).json({ error: 'Failed to serve card image' });
   }
 });
@@ -127,7 +128,7 @@ router.get('/spreads', async (req, res) => {
     
     res.json(imageMap);
   } catch (error) {
-    console.error('Error listing spread images:', error);
+      logger.error('Error listing spread images:', error);
     res.status(500).json({ error: 'Failed to list spread images' });
   }
 });
@@ -217,7 +218,7 @@ router.get('/rider-waite-tarot/:fileName', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error handling rider-waite image:', error);
+      logger.error('Error handling rider-waite image:', error);
     res.status(500).json({ error: 'Failed to process image request' });
   }
 });
@@ -244,7 +245,7 @@ router.get('/decks', async (req, res) => {
     
     res.json(imageMap);
   } catch (error) {
-    console.error('Error listing deck images:', error);
+      logger.error('Error listing deck images:', error);
     res.status(500).json({ error: 'Failed to list deck images' });
   }
 });

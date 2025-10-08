@@ -5,6 +5,7 @@ const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
 const passport = require('passport')
+const logger = require('../lib/logger')
 
 // Multer setup for deck card uploads
 const storage = multer.diskStorage({
@@ -72,7 +73,7 @@ router.get('/', (req, res, next) => {
 
     res.json({ success: true, decks: normalizedDecks })
   } catch (err) {
-    console.error('Error fetching decks:', err)
+    logger.error('Error fetching decks:', err)
     res.status(500).json({ error: 'Failed to fetch decks' })
   }
 })
@@ -102,7 +103,7 @@ router.get('/global', async (req, res) => {
 
     res.json({ success: true, decks: normalizedDecks })
   } catch (err) {
-    console.error('Error fetching global decks:', err)
+    logger.error('Error fetching global decks:', err)
     res.status(500).json({ error: 'Failed to fetch global decks' })
   }
 })
@@ -142,7 +143,7 @@ router.get('/:id', (req, res, next) => {
 
     res.json({ success: true, deck: normalizedDeck })
   } catch (err) {
-    console.error('Error fetching deck:', err)
+    logger.error('Error fetching deck:', err)
     res.status(500).json({ error: 'Failed to fetch deck' })
   }
 })
@@ -176,7 +177,7 @@ router.post('/:deckId/card/:cardName/upload', upload.single('card'), async (req,
 
     res.json({ success: true, card: card || deck.cards[deck.cards.length - 1] })
   } catch (err) {
-    console.error('Card upload error', err)
+    logger.error('Card upload error', err)
     res.status(500).json({ error: 'Upload failed' })
   }
 })
@@ -217,7 +218,7 @@ router.post('/:deckId/upload', upload.single('image'), async (req, res) => {
       res.json({ success: true, deck: { _id: deck._id, deckName: deck.deckName, image: deck.image } })
     }
   } catch (err) {
-    console.error('Upload error', err)
+    logger.error('Upload error', err)
     res.status(500).json({ error: 'Upload failed' })
   }
 })
@@ -244,7 +245,7 @@ router.put('/:deckId/card/:cardName', async (req, res) => {
 
   res.json({ success: true, card: deck.cards[idx] })
   } catch (err) {
-    console.error('Error renaming card', err)
+    logger.error('Error renaming card', err)
     res.status(500).json({ error: 'Failed to rename card' })
   }
 })
@@ -279,7 +280,7 @@ router.get('/', async (req, res) => {
     
     res.json(decksWithMetadata);
   } catch (err) {
-    console.error('Error fetching decks', err);
+    logger.error('Error fetching decks', err);
     res.status(500).json({ error: 'Failed to fetch decks' });
   }
 });
@@ -300,7 +301,7 @@ router.get('/global', async (req, res) => {
       decks: globalDecks
     });
   } catch (err) {
-    console.error('Error fetching global decks', err);
+    logger.error('Error fetching global decks', err);
     res.status(500).json({ error: 'Failed to fetch global decks' });
   }
 });
@@ -323,7 +324,7 @@ router.get('/:id', async (req, res) => {
     console.log('🔍 Backend: Returning deck:', deck.deckName)
     res.json(deck)
   } catch (err) {
-    console.error('🔍 Backend: Error fetching deck', err)
+    logger.error('🔍 Backend: Error fetching deck', err)
     res.status(500).json({ error: 'Failed to fetch deck' })
   }
 })

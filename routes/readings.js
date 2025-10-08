@@ -65,8 +65,9 @@ const authenticateUser = async (req, res, next) => {
         return next()
       }
       
-      // If passport fails, try custom JWT auth as fallback
-      console.warn('🟡 Passport JWT failed, trying custom auth fallback')
+  // If passport fails, try custom JWT auth as fallback
+  const logger = require('../lib/logger')
+  logger.warn('🟡 Passport JWT failed, trying custom auth fallback')
       
       // Extract token manually
       let token = null
@@ -100,16 +101,17 @@ const authenticateUser = async (req, res, next) => {
             return res.status(401).json({ error: 'User not found' })
           }
         }).catch((jwtError) => {
-          console.error('🔴 Custom JWT verification failed:', jwtError)
+          logger.error('🔴 Custom JWT verification failed:', jwtError)
           return res.status(401).json({ error: 'Invalid authentication token' })
         })
       } catch (customError) {
-        console.error('🔴 Custom auth fallback failed:', customError)
+        logger.error('🔴 Custom auth fallback failed:', customError)
         return res.status(401).json({ error: 'Authentication failed' })
       }
     })
   } catch (error) {
-    console.error('🔴 Authentication middleware error:', error)
+    const logger = require('../lib/logger')
+    logger.error('🔴 Authentication middleware error:', error)
     return res.status(500).json({ error: 'Authentication service error' })
   }
 }

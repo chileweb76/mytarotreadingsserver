@@ -9,7 +9,8 @@ router.get('/', passport.authenticate('jwt', { session: false }), async (req, re
     const querents = await Querent.find({ userId: req.user._id.toString() }).sort({ createdAt: -1 })
     res.json({ querents })
   } catch (err) {
-    console.error('Get querents error:', err)
+      const logger = require('../lib/logger')
+      logger.error('Get querents error:', err)
     res.status(500).json({ error: 'Failed to fetch querents' })
   }
 })
@@ -25,7 +26,7 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
     await q.save()
     res.status(201).json({ querent: q })
   } catch (err) {
-    console.error('Create querent error:', err)
+      logger.error('Create querent error:', err)
     res.status(500).json({ error: 'Failed to create querent' })
   }
 })
@@ -46,7 +47,7 @@ router.delete('/:id', passport.authenticate('jwt', { session: false }), async (r
     await Querent.findByIdAndDelete(id)
     return res.json({ message: 'Querent deleted' })
   } catch (err) {
-    console.error('Delete querent error:', err)
+      logger.error('Delete querent error:', err)
     res.status(500).json({ error: 'Failed to delete querent' })
   }
 })

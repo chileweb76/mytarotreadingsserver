@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const Deck = require('../models/Deck')
+const logger = require('../lib/logger')
 
 // Get card image by name and deck
 router.get('/', async (req, res) => {
@@ -46,7 +47,7 @@ router.get('/', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Error fetching card image:', error)
+    logger.error('Error fetching card image:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

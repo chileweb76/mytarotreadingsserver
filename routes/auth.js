@@ -11,11 +11,12 @@ const Querent = require('../models/Querent')
 const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
+const logger = require('../lib/logger')
 let sharp
 try {
   sharp = require('sharp')
 } catch (e) {
-  console.warn('sharp is not installed; image resizing will be skipped. Install sharp for optimal images.')
+  logger.warn('sharp is not installed; image resizing will be skipped. Install sharp for optimal images.')
 }
 
 // Blob storage for profile pictures
@@ -168,18 +169,18 @@ router.post('/register', async (req, res) => {
         if (!resp || !resp.ok) {
           let text = ''
           try { text = await resp.text() } catch (e) { text = String(e) }
-          console.error('Courier send returned non-OK during registration:', resp && resp.status, text)
+          logger.error('Courier send returned non-OK during registration:', resp && resp.status, text)
         } else {
-          console.info('Verification email scheduled/sent to Courier for', email)
+          logger.info('Verification email scheduled/sent to Courier for', email)
         }
       } catch (err) {
         // Log the error so we can see why sends fail in server logs.
-        console.error('Failed to send verification email during registration:', err && err.stack ? err.stack : err)
+        logger.error('Failed to send verification email during registration:', err && err.stack ? err.stack : err)
       }
     } else {
       // Warn if Courier is not configured so admins know emails won't be sent
-      console.warn('⚠️  Courier not configured - verification email NOT sent for:', email)
-      console.warn('   Set COURIER_AUTH_TOKEN and COURIER_VERIFY_TEMPLATE_ID environment variables to enable email verification')
+      logger.warn('⚠️  Courier not configured - verification email NOT sent for:', email)
+      logger.warn('   Set COURIER_AUTH_TOKEN and COURIER_VERIFY_TEMPLATE_ID environment variables to enable email verification')
     }
 
     // Do NOT issue JWT until email is verified
@@ -192,7 +193,7 @@ router.post('/register', async (req, res) => {
       }
     })
   } catch (error) {
-    console.error('Registration error:', error && error.stack ? error.stack : error)
+    logger.error('Registration error:', error && error.stack ? error.stack : error)
     // In dev, include a little more detail so we can triage quickly
     if (process.env.NODE_ENV !== 'production') {
       return res.status(500).json({ error: 'Internal server error', details: error && error.message ? error.message : String(error) })
@@ -226,7 +227,7 @@ router.get('/verify', async (req, res) => {
     // Fallback: return JSON when no client URL configured
     return res.json({ ok: true, message: 'Email verified' })
   } catch (err) {
-    console.error('Verification error:', err)
+  logger.error('Verification error:', err)
     return res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -255,7 +256,7 @@ router.post('/verify', async (req, res) => {
 
     return res.json({ ok: true, message: 'Email verified' })
   } catch (err) {
-    console.error('Verification POST error:', err)
+  logger.error('Verification POST error:', err)
     return res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -311,15 +312,15 @@ router.post('/resend', async (req, res) => {
       body: JSON.stringify(payload)
     }), 3000, 'courier.send timeout')
 
-    if (!resp || !resp.ok) {
-      let text = ''
-      try { text = await resp.text() } catch (e) { text = String(e) }
-      console.error('Courier send returned non-OK during resend:', resp && resp.status, text)
-    } else {
-      console.info('Resend verification email sent for', email)
-    }
+      if (!resp || !resp.ok) {
+          let text = ''
+          try { text = await resp.text() } catch (e) { text = String(e) }
+          logger.error('Courier send returned non-OK during resend:', resp && resp.status, text)
+        } else {
+          logger.info('Resend verification email sent for', email)
+        }
   } catch (err) {
-    console.error('Failed to resend verification email:', err && err.stack ? err.stack : err)
+  logger.error('Failed to resend verification email:', err && err.stack ? err.stack : err)
   }
     }
 
@@ -328,7 +329,7 @@ router.post('/resend', async (req, res) => {
 
     return res.json({ message: 'Verification email resent if configured' })
   } catch (err) {
-    console.error('Resend error:', err)
+  logger.error('Resend error:', err)
     return res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -384,13 +385,13 @@ router.post('/forgot', async (req, res) => {
           body: JSON.stringify(payload)
         })
       } catch (err) {
-        console.error('Failed to send reset email via Courier:', err)
+  logger.error('Failed to send reset email via Courier:', err)
       }
     }
 
     return res.json({ message: 'If that email exists, a reset link has been sent.' })
   } catch (err) {
-    console.error('Forgot password error:', err)
+  logger.error('Forgot password error:', err)
     return res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -416,7 +417,7 @@ router.post('/reset', async (req, res) => {
 
     return res.json({ message: 'Password has been reset. You may now sign in.' })
   } catch (err) {
-    console.error('Reset password error:', err)
+  logger.error('Reset password error:', err)
     return res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -437,7 +438,7 @@ router.get('/reset', async (req, res) => {
     // Fallback: return a simple JSON message so callers see the token
     return res.json({ ok: true, token })
   } catch (err) {
-    console.error('Reset redirect error:', err)
+  logger.error('Reset redirect error:', err)
     return res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -474,7 +475,7 @@ router.post('/login', async (req, res) => {
 
     // Require email verification for local accounts (strict check)
     if (user.isEmailVerified !== true) {
-      console.warn('Login blocked for unverified user:', user.email, 'isEmailVerified:', user.isEmailVerified)
+  logger.warn('Login blocked for unverified user:', user.email, 'isEmailVerified:', user.isEmailVerified)
       return res.status(403).json({ 
         error: 'Please verify your email before logging in',
         email: user.email,
@@ -493,7 +494,7 @@ router.post('/login', async (req, res) => {
     // Generate tokens
     // Ensure JWT_SECRET is present
     if (!process.env.JWT_SECRET) {
-      console.error('Missing JWT_SECRET environment variable')
+  logger.error('Missing JWT_SECRET environment variable')
       return res.status(500).json({ error: 'Server misconfiguration' })
     }
 
@@ -520,7 +521,7 @@ router.post('/login', async (req, res) => {
       // refresh token longer lived
       res.cookie('refreshToken', refreshToken, Object.assign({}, cookieOptions, { maxAge: 30 * 24 * 60 * 60 * 1000 }))
     } catch (e) {
-      console.warn('Failed to set cookies on login response:', e)
+  logger.warn('Failed to set cookies on login response:', e)
     }
 
     // Return JSON payload for API clients (keeps backward compatibility)
@@ -540,7 +541,7 @@ router.post('/login', async (req, res) => {
       }
     })
   } catch (error) {
-    console.error('Login error:', error)
+  logger.error('Login error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -561,7 +562,7 @@ router.post('/refresh', async (req, res) => {
     const token = generateToken(user._id)
     res.json({ token, refreshToken: newRefresh })
   } catch (err) {
-    console.error('Refresh error:', err)
+  logger.error('Refresh error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -594,7 +595,7 @@ router.get('/me', passport.authenticate('jwt', { session: false }), async (req, 
       }
     })
   } catch (error) {
-    console.error('Get user error:', error)
+  logger.error('Get user error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -605,7 +606,7 @@ router.put('/profile-picture', passport.authenticate('jwt', { session: false }),
   upload.single('picture')(req, res, (err) => {
     if (err) {
       // Multer errors
-      console.warn('Multer error on profile-picture upload:', err)
+  logger.warn('Multer error on profile-picture upload:', err)
       // if file was partially written, remove it
       if (req && req.file && req.file.path) {
         try { fs.unlinkSync(req.file.path) } catch (e) {}
@@ -656,7 +657,7 @@ router.put('/profile-picture', passport.authenticate('jwt', { session: false }),
         const thumbResult = await uploadToBlob(thumbBuffer, `${path.parse(req.file.originalname).name}-64.jpg`, 'profiles', user._id.toString())
         variants.thumb = thumbResult.url
       } catch (err) {
-        console.error('Error resizing image with sharp:', err)
+  logger.error('Error resizing image with sharp:', err)
       }
     }
 
@@ -667,7 +668,7 @@ router.put('/profile-picture', passport.authenticate('jwt', { session: false }),
         await deleteFromBlob(user.profilePictureSmall)
         await deleteFromBlob(user.profilePictureThumb)
       } catch (err) {
-        console.warn('Failed to delete old profile pictures:', err)
+  logger.warn('Failed to delete old profile pictures:', err)
       }
     }
 
@@ -685,7 +686,7 @@ router.put('/profile-picture', passport.authenticate('jwt', { session: false }),
       profilePictureThumb: user.profilePictureThumb 
     })
   } catch (err) {
-    console.error('Profile picture upload error:', err)
+  logger.error('Profile picture upload error:', err)
     res.status(500).json({ error: 'Internal server error during upload' })
   }
 })
@@ -712,7 +713,7 @@ router.delete('/profile-picture', passport.authenticate('jwt', { session: false 
       await deleteFromBlob(user.profilePictureSmall)
       await deleteFromBlob(user.profilePictureThumb)
     } catch (err) {
-      console.warn('Failed to delete blob files:', err)
+  logger.warn('Failed to delete blob files:', err)
     }
 
     user.profilePicture = null
@@ -723,7 +724,7 @@ router.delete('/profile-picture', passport.authenticate('jwt', { session: false 
 
     res.json({ message: 'Uploaded profile picture removed' })
   } catch (err) {
-    console.error('Remove profile picture error:', err)
+  logger.error('Remove profile picture error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -760,7 +761,7 @@ router.put('/username', passport.authenticate('jwt', { session: false }), async 
       }
     })
   } catch (err) {
-    console.error('Change username error:', err)
+  logger.error('Change username error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -789,7 +790,7 @@ router.put('/password', passport.authenticate('jwt', { session: false }), async 
 
     res.json({ message: 'Password updated successfully' })
   } catch (err) {
-    console.error('Change password error:', err)
+  logger.error('Change password error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

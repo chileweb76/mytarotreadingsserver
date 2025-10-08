@@ -40,7 +40,8 @@ if (!isServerless) {
   try {
     app.use('/uploads', express.static(uploadsDir))
   } catch (err) {
-    console.warn('Failed to mount uploads static route, skipping:', err && err.code)
+  const logger = require('./lib/logger')
+  logger.warn('Failed to mount uploads static route, skipping:', err && err.code)
   }
 }
 
@@ -53,7 +54,8 @@ const { connectToDatabase } = require('./utils/connectToDatabase')
 async function runOptionalSeeding() {
   if (process.env.RUN_SEEDS !== 'true') return
 
-  console.log('Running optional DB seeding (RUN_SEEDS=true)')
+  const logger = require('./lib/logger')
+  logger.info('Running optional DB seeding (RUN_SEEDS=true)')
 
   try {
     // Seed spreads collection from client/public/spreads.json if empty
@@ -66,7 +68,7 @@ async function runOptionalSeeding() {
         try {
           items = JSON.parse(raw)
         } catch (e) {
-          console.error('Failed to parse spreads.json', e)
+          logger.error('Failed to parse spreads.json', e)
           items = []
         }
 
@@ -78,11 +80,11 @@ async function runOptionalSeeding() {
             image: it.image || ''
           }))
           await Spread.insertMany(toInsert)
-          console.log(`🌱 Seeded ${toInsert.length} spreads into DB`)
+          logger.info(`🌱 Seeded ${toInsert.length} spreads into DB`)
         }
       }
     } catch (e) {
-      console.error('Spreads seeding skipped:', e)
+  logger.error('Spreads seeding skipped:', e)
     }
 
     // Deck seeding
@@ -95,7 +97,7 @@ async function runOptionalSeeding() {
         try {
           deckData = JSON.parse(raw)
         } catch (e) {
-          console.error('Failed to parse rider_waite.json', e)
+          logger.error('Failed to parse rider_waite.json', e)
         }
 
         if (deckData) {
@@ -109,14 +111,14 @@ async function runOptionalSeeding() {
               cards: deckData.cards
             })
             await riderWaiteDeck.save()
-            console.log(`🌱 Seeded Rider-Waite Tarot Deck with ${deckData.cards.length} cards into DB`)
+            logger.info(`🌱 Seeded Rider-Waite Tarot Deck with ${deckData.cards.length} cards into DB`)
           } else {
-            console.log('📚 Rider-Waite Tarot Deck already exists in DB')
+            logger.info('📚 Rider-Waite Tarot Deck already exists in DB')
           }
         }
       }
     } catch (e) {
-      console.error('Deck seeding skipped:', e)
+  logger.error('Deck seeding skipped:', e)
     }
 
     // Global "Self" querent
@@ -126,10 +128,10 @@ async function runOptionalSeeding() {
       if (!existingSelfQuerent) {
         const selfQuerent = new Querent({ name: 'Self', userId: null })
         await selfQuerent.save()
-        console.log(`🌱 Seeded global "Self" querent into DB`)
+  logger.info(`🌱 Seeded global "Self" querent into DB`)
       }
     } catch (e) {
-      console.error('Self querent seeding skipped:', e)
+  logger.error('Self querent seeding skipped:', e)
     }
 
     // Global tags
@@ -146,12 +148,12 @@ async function runOptionalSeeding() {
           await globalTag.save()
         }
       }
-      console.log(`🌱 Seeded global tags into DB`)
+  logger.info(`🌱 Seeded global tags into DB`)
     } catch (e) {
-      console.error('Global tags seeding skipped:', e)
+  logger.error('Global tags seeding skipped:', e)
     }
   } catch (e) {
-    console.error('Error during optional seeding:', e)
+  logger.error('Error during optional seeding:', e)
   }
 }
 
@@ -180,12 +182,12 @@ async function ensureDatabase() {
 
       await connectToDatabase()
       _dbInitialized = true
-      console.log('✅ Connected to MongoDB Atlas (ensureDatabase)')
+  logger.info('✅ Connected to MongoDB Atlas (ensureDatabase)')
       if (!isServerless || process.env.RUN_SEEDS === 'true') {
         await runOptionalSeeding()
       }
     } catch (error) {
-      console.error('❌ MongoDB connection error (ensureDatabase):', error)
+  logger.error('❌ MongoDB connection error (ensureDatabase):', error)
       // don't crash in serverless; let handlers surface the error
       if (!isServerless) process.exit(1)
       throw error
@@ -262,7 +264,7 @@ const purgeSoftDeletedAccounts = async () => {
         user.deletionNotificationSentAt = new Date()
         await user.save()
       } catch (err) {
-        console.error('Failed to send deletion notification for user', user._id, err)
+  logger.error('Failed to send deletion notification for user', user._id, err)
       }
     }
 
@@ -311,7 +313,7 @@ const purgeSoftDeletedAccounts = async () => {
         user.deletionFinalNotified = true
         await user.save()
       } catch (err) {
-        console.error('Failed to send final deletion notification for user', user._id, err)
+  logger.error('Failed to send final deletion notification for user', user._id, err)
       }
     }
 
@@ -324,13 +326,13 @@ const purgeSoftDeletedAccounts = async () => {
         const Spread = require('./models/Spread')
         await Spread.deleteMany({ owner: user._id })
       } catch (e) {
-        console.warn('Failed to delete spreads for user', user._id, e)
+  logger.warn('Failed to delete spreads for user', user._id, e)
       }
       await User.findByIdAndDelete(user._id)
-      console.log(`Purged soft-deleted user ${user._id}`)
+  logger.info(`Purged soft-deleted user ${user._id}`)
     }
   } catch (err) {
-    console.error('Error during soft-delete purge:', err)
+  logger.error('Error during soft-delete purge:', err)
   }
 }
 
@@ -376,7 +378,8 @@ if (process.env.NODE_ENV !== 'production') {
   if (local && allowedOrigins.indexOf(local) === -1) allowedOrigins.push(local)
 }
 
-console.log('🔵 [CORS Setup] Allowed origins:', allowedOrigins)
+const logger = require('./lib/logger')
+logger.debug && logger.debug('🔵 [CORS Setup] Allowed origins:', allowedOrigins)
 
 // Temporary debugging middleware: echo the Origin header for allowed
 // origins and for Vercel-assigned subdomains (*.vercel.app). This helps
@@ -392,7 +395,7 @@ app.use((req, res, next) => {
     // If the origin is explicitly allowed, echo it so credentialed
     // requests succeed.
     if (allowedOrigins && allowedOrigins.indexOf(origin) !== -1) {
-      console.log('🟢 [CORS Main] Allowed origin:', origin)
+        logger.info('🟢 [CORS Main] Allowed origin:', origin)
       res.setHeader('Access-Control-Allow-Origin', origin)
       res.setHeader('Access-Control-Allow-Credentials', 'true')
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
@@ -409,7 +412,7 @@ app.use((req, res, next) => {
     try {
       const incomingHost = new URL(origin).hostname.replace(/^www\./i, '').toLowerCase()
       if (incomingHost && incomingHost.endsWith('.vercel.app')) {
-        console.log('🟢 [CORS Main] Vercel subdomain allowed:', origin)
+  logger.info('🟢 [CORS Main] Vercel subdomain allowed:', origin)
         res.setHeader('Access-Control-Allow-Origin', origin)
         res.setHeader('Access-Control-Allow-Credentials', 'true')
         res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
@@ -457,7 +460,7 @@ app.use((req, res, next) => {
     // fallback to wildcard
   }
 
-  console.log('🔵 [OPTIONS Preflight]', { 
+  logger.debug && logger.debug('🔵 [OPTIONS Preflight]', { 
     origin, 
     allowOrigin, 
     method: req.method, 
@@ -479,7 +482,7 @@ app.use((req, res, next) => {
   try { res.setHeader('Vary', 'Origin') } catch (e) {}
   res.setHeader('Access-Control-Max-Age', '0') // Don't cache preflight
   
-  console.log('🟢 [OPTIONS Response] Headers set:', {
+  logger.debug && logger.debug('🟢 [OPTIONS Response] Headers set:', {
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Credentials': 'true',
     'Cache-Control': 'no-cache, no-store, must-revalidate'
@@ -567,7 +570,7 @@ app.use(express.json({ limit: '10mb' }))
 try {
   if (!passport) passport = require('./config/passport')
 } catch (e) {
-  console.error('Failed to require ./config/passport:', e)
+  logger.error('Failed to require ./config/passport:', e)
   throw e
 }
 
@@ -588,7 +591,7 @@ if (isServerless) {
       await ensureDatabase()
       return next()
     } catch (err) {
-      console.error('ensureDatabase middleware error:', err)
+  logger.error('ensureDatabase middleware error:', err)
       // 503 indicates a temporary unavailable dependency (DB)
       return res.status(503).json({ error: 'Database unavailable' })
     }
@@ -683,14 +686,14 @@ app.get('/', (req, res) => {
 app.use((err, req, res, next) => {
   try {
     // Basic stack log
-    console.error('Unhandled error:', err && err.stack ? err.stack : err)
+  logger.error('Unhandled error:', err && err.stack ? err.stack : err)
 
     const verbose = process.env.ENABLE_VERBOSE_ERRORS === 'true' || process.env.NODE_ENV !== 'production'
 
     if (verbose) {
       // Log limited request context (avoid secrets)
       try {
-        console.error('Request context for error:', {
+  logger.error('Request context for error:', {
           method: req && req.method,
           url: req && req.originalUrl,
           origin: req && req.headers && req.headers.origin,
@@ -707,7 +710,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Something went wrong!' })
   } catch (outer) {
     // If the error handler itself throws, fallback to minimal response
-    console.error('Error handler failed:', outer)
+  logger.error('Error handler failed:', outer)
     try { res.status(500).json({ error: 'Something went wrong!' }) } catch (e) {}
   }
 })
@@ -725,14 +728,14 @@ if (!isServerless) {
       const port = Number(process.env.PORT) || 5001
       const tryStart = async (p) => {
         const server = app.listen(p, () => {
-          console.log(`🚀 Server running on http://localhost:${p}`)
+          logger.info(`🚀 Server running on http://localhost:${p}`)
         })
         server.on('error', async (err) => {
           if (err.code === 'EADDRINUSE') {
-            console.warn(`Port ${p} is busy, trying ${p + 1}...`)
+            logger.warn(`Port ${p} is busy, trying ${p + 1}...`)
             await tryStart(p + 1)
           } else {
-            console.error('Server error', err)
+            logger.error('Server error', err)
             process.exit(1)
           }
         })
@@ -745,7 +748,7 @@ if (!isServerless) {
         setInterval(purgeSoftDeletedAccounts, purgeIntervalMs)
       }, 2000)
     } catch (err) {
-      console.error('Failed to initialize app:', err)
+  logger.error('Failed to initialize app:', err)
       process.exit(1)
     }
   })()
