@@ -133,12 +133,15 @@ router.post('/register', async (req, res) => {
       // build a server-side verify URL so the link hits this API's /api/auth/verify route
       const serverBase = buildServerBase(req)
       const verifyUrl = `${serverBase}/api/auth/verify?token=${verificationToken}`
+      const clientBase = (process.env.CLIENT_URL || '').replace(/\/$/, '') || ''
       const payload = {
         message: {
           to: { email },
           template: courierTemplateId,
           data: {
             username: username,
+            site_url: clientBase || serverBase,
+            server_base: serverBase,
             verify_url: verifyUrl,
             verifyUrl: verifyUrl
           }
@@ -274,12 +277,15 @@ router.post('/resend', async (req, res) => {
     if (process.env.COURIER_AUTH_TOKEN && courierTemplateId) {
       const serverBase = buildServerBase(req)
       const verifyUrl = `${serverBase}/api/auth/verify?token=${verificationToken}`
+      const clientBase = (process.env.CLIENT_URL || '').replace(/\/$/, '') || ''
       const payload = {
         message: {
           to: { email },
           template: courierTemplateId,
           data: {
             username: user.username,
+            site_url: clientBase || serverBase,
+            server_base: serverBase,
             verify_url: verifyUrl,
             verifyUrl: verifyUrl
           }
@@ -339,13 +345,16 @@ router.post('/forgot', async (req, res) => {
     if (process.env.COURIER_AUTH_TOKEN && courierTemplateId) {
       try {
         const serverBase = `${req.protocol}://${req.get('host')}`
-        const resetUrl = `${process.env.CLIENT_URL || serverBase}/auth/reset?token=${resetToken}`
+        const clientBase = (process.env.CLIENT_URL || '').replace(/\/$/, '') || ''
+        const resetUrl = `${clientBase || serverBase}/auth/reset?token=${resetToken}`
         const payload = {
           message: {
             to: { email },
             template: courierTemplateId,
             data: {
               username: user.username,
+              site_url: clientBase || serverBase,
+              server_base: serverBase,
               reset_url: resetUrl,
               resetUrl: resetUrl
             }

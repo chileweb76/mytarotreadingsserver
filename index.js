@@ -238,6 +238,8 @@ const purgeSoftDeletedAccounts = async () => {
             template: notificationTemplate,
             data: {
               username: user.username,
+              site_url: serverBase,
+              server_base: serverBase,
               purge_date: purgeDate.toISOString(),
               days_left: Math.ceil((purgeDate - now) / (24 * 60 * 60 * 1000)),
               cancel_url: `${serverBase}/settings`,
@@ -286,6 +288,8 @@ const purgeSoftDeletedAccounts = async () => {
             template: notificationTemplate,
             data: {
               username: user.username,
+              site_url: serverBase,
+              server_base: serverBase,
               purge_date: purgeDate.toISOString(),
               days_left: Math.ceil((purgeDate - now) / (24 * 60 * 60 * 1000)),
               cancel_url: `${serverBase}/settings`,
