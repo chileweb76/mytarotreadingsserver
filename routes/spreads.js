@@ -25,13 +25,26 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
   try {
     const { spread, cards, image, numberofCards, meanings } = req.body
     if (!spread) return res.status(400).json({ error: 'spread is required' })
+    
+    const owner = req.user && (req.user._id || req.user.id) ? (req.user._id || req.user.id) : null
+    
+    // Check for duplicate spread name for this user (case-insensitive)
+    const existing = await Spread.findOne({
+      spread: { $regex: `^${spread.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' },
+      owner: owner
+    })
+    
+    if (existing) {
+      return res.status(409).json({ error: 'You already have a spread with that name' })
+    }
+    
     const doc = new Spread({
       spread,
       cards: Array.isArray(cards) ? cards : [],
   image: image && String(image).trim() ? image : '/images/spreads/custom.png',
       numberofCards: numberofCards || (Array.isArray(cards) ? cards.length : undefined),
       meanings: Array.isArray(meanings) ? meanings : [],
-      owner: req.user && (req.user._id || req.user.id) ? (req.user._id || req.user.id) : null,
+      owner: owner,
       isCustom: true
     })
     await doc.save()

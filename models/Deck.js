@@ -15,4 +15,8 @@ const deckSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 })
 
+// Add compound unique index to allow same deckName for different users
+// but prevent duplicate deckNames for the same user
+deckSchema.index({ deckName: 1, owner: 1 }, { unique: true })
+
 module.exports = mongoose.model('Deck', deckSchema)

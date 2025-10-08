@@ -12,4 +12,7 @@ const spreadSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 })
 
+// Allow same spread name for different users
+spreadSchema.index({ spread: 1, owner: 1 }, { unique: true })
+
 module.exports = mongoose.model('Spread', spreadSchema)

@@ -22,7 +22,20 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
     if (!name || typeof name !== 'string' || name.trim().length < 1) {
       return res.status(400).json({ error: 'Invalid name' })
     }
-    const q = new Querent({ name: name.trim(), userId: req.user._id.toString() })
+    
+    const userId = req.user._id.toString()
+    
+    // Check for duplicate querent name for this user (case-insensitive)
+    const existing = await Querent.findOne({
+      name: { $regex: `^${name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' },
+      userId: userId
+    })
+    
+    if (existing) {
+      return res.status(409).json({ error: 'You already have a querent with that name' })
+    }
+    
+    const q = new Querent({ name: name.trim(), userId: userId })
     await q.save()
     res.status(201).json({ querent: q })
   } catch (err) {

@@ -334,12 +334,21 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
   try {
     const { deckName, description, cards } = req.body
     if (!deckName) return res.status(400).json({ error: 'deckName is required' })
-  // Prevent duplicate deck names (case-insensitive)
-  const escapeReg = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const existing = await Deck.findOne({ deckName: { $regex: `^${escapeReg(deckName)}$`, $options: 'i' } })
-  if (existing) return res.status(409).json({ error: 'A deck with that name already exists' })
+    
+    const owner = req.user && (req.user.id || req.user._id) ? (req.user.id || req.user._id) : null
+    
+    // Check for duplicate deckName for THIS user only (case-insensitive)
+    const escapeReg = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const existing = await Deck.findOne({ 
+      deckName: { $regex: `^${escapeReg(deckName)}$`, $options: 'i' },
+      owner: owner 
+    })
+    
+    if (existing) {
+      return res.status(409).json({ error: 'You already have a deck with that name' })
+    }
 
-  // If no cards provided, populate with the standard 78 tarot card names
+    // If no cards provided, populate with the standard 78 tarot card names
     const defaultCards = [
       // Major Arcana
       'The Fool','The Magician','The High Priestess','The Empress','The Emperor','The Hierophant','The Lovers','The Chariot','Strength','The Hermit','Wheel of Fortune','Justice','The Hanged Man','Death','Temperance','The Devil','The Tower','The Star','The Moon','The Sun','Judgement','The World',
