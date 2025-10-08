@@ -398,6 +398,27 @@ router.post('/reset', async (req, res) => {
   }
 })
 
+// Redirect GET /reset (useful for email links that point to the server)
+// This mirrors the verification flow by redirecting to the client reset page
+router.get('/reset', async (req, res) => {
+  try {
+    const { token } = req.query
+    if (!token) return res.status(400).json({ error: 'Token is required' })
+
+    // Normalize client base URL
+    const clientBase = (process.env.CLIENT_URL || process.env.NEXT_PUBLIC_CLIENT_URL || '').replace(/\/$/, '') || ''
+    if (clientBase) {
+      return res.redirect(`${clientBase}/auth/reset?token=${token}`)
+    }
+
+    // Fallback: return a simple JSON message so callers see the token
+    return res.json({ ok: true, token })
+  } catch (err) {
+    console.error('Reset redirect error:', err)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // Login user
 router.post('/login', async (req, res) => {
   try {
