@@ -6,23 +6,25 @@ const path = require('path')
 const fs = require('fs')
 const passport = require('passport')
 const logger = require('../lib/logger')
+const { uploadDeckCover, uploadDeckCard, createDeckFolderStructure } = require('../utils/deckBlobStorage')
 
-// Multer setup for deck card uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const deckId = req.params.deckId
-    const { getUploadsDir } = require('../utils/uploads')
-    const dest = getUploadsDir('decks', deckId)
-    cb(null, dest)
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname)
-    const safeName = req.params.cardName.replace(/[^a-z0-9-_\.]/gi, '_')
-    cb(null, `${safeName}${ext}`)
+// Multer setup for in-memory buffer upload (will upload to blob)
+const storage = multer.memoryStorage()
+const upload = multer({ 
+  storage, 
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase())
+    const mimetype = allowedTypes.test(file.mimetype)
+    
+    if (mimetype && extname) {
+      return cb(null, true)
+    } else {
+      cb(new Error('Only image files are allowed'))
+    }
   }
 })
-
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } })
 
 // GET /api/decks - Get all decks (global and user-owned)
 router.get('/', (req, res, next) => {
@@ -149,79 +151,136 @@ router.get('/:id', (req, res, next) => {
 })
 
 // Upload a card image for a deck
-router.post('/:deckId/card/:cardName/upload', upload.single('card'), async (req, res) => {
-  try {
-    const { deckId, cardName } = req.params
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
-    const deck = await Deck.findById(deckId)
-    if (!deck) return res.status(404).json({ error: 'Deck not found' })
+router.post('/:deckId/card/:cardName/upload', 
+  passport.authenticate('jwt', { session: false }),
+  upload.single('card'), 
+  async (req, res) => {
+    try {
+      const { deckId, cardName } = req.params
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+      
+      const deck = await Deck.findById(deckId)
+      if (!deck) return res.status(404).json({ error: 'Deck not found' })
 
-    // Check if this is the Rider-Waite deck - prevent editing
-    if (deck.deckName === 'Rider-Waite Tarot Deck') {
-      return res.status(403).json({ error: 'Rider-Waite Tarot cards cannot be edited' })
-    }
+      // Check if this is the Rider-Waite deck - prevent editing
+      if (deck.deckName === 'Rider-Waite Tarot Deck') {
+        return res.status(403).json({ error: 'Rider-Waite Tarot cards cannot be edited' })
+      }
 
-  const { buildServerBase } = require('../utils/serverBase')
-  const webPath = `${buildServerBase(req)}/uploads/decks/${deckId}/${req.file.filename}`
+      // Verify ownership
+      const ownerId = deck.owner?.toString()
+      const userId = req.user?._id?.toString() || req.user?.id?.toString()
+      if (!ownerId || !userId || ownerId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to edit this deck' })
+      }
 
-    // find matching card by name (case-insensitive) and update image
-    const card = deck.cards.find(c => (c.name || '').toLowerCase() === (cardName || '').toLowerCase())
-    if (card) {
-      card.image = webPath
-    } else {
-      // if not found, push new card
-      deck.cards.push({ name: cardName, image: webPath })
-    }
+      // Upload to blob with hierarchical structure
+      const result = await uploadDeckCard(
+        req.file.buffer,
+        req.file.originalname,
+        cardName,
+        deckId,
+        ownerId
+      )
 
-    await deck.save()
-
-    res.json({ success: true, card: card || deck.cards[deck.cards.length - 1] })
-  } catch (err) {
-    logger.error('Card upload error', err)
-    res.status(500).json({ error: 'Upload failed' })
-  }
-})
-
-// Upload a deck cover image
-router.post('/:deckId/upload', upload.single('image'), async (req, res) => {
-  try {
-    const { deckId } = req.params
-    const { cardName } = req.body // Check if this is a card upload
-    
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
-    const deck = await Deck.findById(deckId)
-    if (!deck) return res.status(404).json({ error: 'Deck not found' })
-
-    // Check if this is the Rider-Waite deck - prevent editing
-    if (deck.deckName === 'Rider-Waite Tarot Deck') {
-      return res.status(403).json({ error: 'Rider-Waite Tarot cards cannot be edited' })
-    }
-
-  const { buildServerBase } = require('../utils/serverBase')
-  const webPath = `${buildServerBase(req)}/uploads/decks/${deckId}/${req.file.filename}`
-    
-    if (cardName) {
-      // This is a card upload
+      // Find matching card by name (case-insensitive) and update image
       const card = deck.cards.find(c => (c.name || '').toLowerCase() === (cardName || '').toLowerCase())
       if (card) {
-        card.image = webPath
+        card.image = result.url
       } else {
-        // if not found, push new card
-        deck.cards.push({ name: cardName, image: webPath })
+        // If not found, push new card
+        deck.cards.push({ name: cardName, image: result.url })
       }
+
       await deck.save()
-      res.json({ success: true, card: card || deck.cards[deck.cards.length - 1] })
-    } else {
-      // This is a deck image upload
-      deck.image = webPath
-      await deck.save()
-      res.json({ success: true, deck: { _id: deck._id, deckName: deck.deckName, image: deck.image } })
+
+      res.json({ 
+        success: true, 
+        card: card || deck.cards[deck.cards.length - 1],
+        blobPath: result.pathname
+      })
+    } catch (err) {
+      logger.error('Card upload error', err)
+      res.status(500).json({ error: err.message || 'Upload failed' })
     }
-  } catch (err) {
-    logger.error('Upload error', err)
-    res.status(500).json({ error: 'Upload failed' })
   }
-})
+)
+
+// Upload a deck cover image
+router.post('/:deckId/upload', 
+  passport.authenticate('jwt', { session: false }),
+  upload.single('image'), 
+  async (req, res) => {
+    try {
+      const { deckId } = req.params
+      const { cardName } = req.body // Check if this is a card upload
+      
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+      const deck = await Deck.findById(deckId)
+      if (!deck) return res.status(404).json({ error: 'Deck not found' })
+
+      // Check if this is the Rider-Waite deck - prevent editing
+      if (deck.deckName === 'Rider-Waite Tarot Deck') {
+        return res.status(403).json({ error: 'Rider-Waite Tarot cards cannot be edited' })
+      }
+
+      // Verify ownership
+      const ownerId = deck.owner?.toString()
+      const userId = req.user?._id?.toString() || req.user?.id?.toString()
+      if (!ownerId || !userId || ownerId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to edit this deck' })
+      }
+      
+      if (cardName) {
+        // This is a card upload - use hierarchical blob storage
+        const result = await uploadDeckCard(
+          req.file.buffer,
+          req.file.originalname,
+          cardName,
+          deckId,
+          ownerId
+        )
+        
+        const card = deck.cards.find(c => (c.name || '').toLowerCase() === (cardName || '').toLowerCase())
+        if (card) {
+          card.image = result.url
+        } else {
+          // If not found, push new card
+          deck.cards.push({ name: cardName, image: result.url })
+        }
+        await deck.save()
+        res.json({ 
+          success: true, 
+          card: card || deck.cards[deck.cards.length - 1],
+          blobPath: result.pathname
+        })
+      } else {
+        // This is a deck cover image upload - use hierarchical blob storage
+        const result = await uploadDeckCover(
+          req.file.buffer,
+          req.file.originalname,
+          deckId,
+          ownerId
+        )
+        
+        deck.image = result.url
+        await deck.save()
+        res.json({ 
+          success: true, 
+          deck: { 
+            _id: deck._id, 
+            deckName: deck.deckName, 
+            image: deck.image 
+          },
+          blobPath: result.pathname
+        })
+      }
+    } catch (err) {
+      logger.error('Upload error', err)
+      res.status(500).json({ error: err.message || 'Upload failed' })
+    }
+  }
+)
 
 // Rename a card in a deck (match by cardName param, case-insensitive)
 router.put('/:deckId/card/:cardName', async (req, res) => {
@@ -337,6 +396,10 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
     
     const owner = req.user && (req.user.id || req.user._id) ? (req.user.id || req.user._id) : null
     
+    if (!owner) {
+      return res.status(401).json({ error: 'Authentication required to create deck' })
+    }
+    
     // Check for duplicate deckName for THIS user only (case-insensitive)
     const escapeReg = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const existing = await Deck.findOne({ 
@@ -364,12 +427,24 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
 
     const cardsToSave = Array.isArray(cards) && cards.length ? cards : defaultCards.map(name => ({ name, image: '' }))
 
-    const deckData = { deckName, description, cards: cardsToSave }
-    if (owner) deckData.owner = owner
+    const deckData = { deckName, description, cards: cardsToSave, owner }
 
     const deck = new Deck(deckData)
     await deck.save()
-    res.status(201).json(deck)
+    
+    // Initialize blob folder structure for this deck
+    try {
+      const folderStructure = await createDeckFolderStructure(deck._id.toString(), owner.toString())
+      logger.info('Deck blob folder structure initialized:', folderStructure)
+    } catch (folderErr) {
+      logger.warn('Failed to initialize deck folder structure:', folderErr)
+      // Don't fail the deck creation if folder structure fails
+    }
+    
+    res.status(201).json({
+      ...deck.toObject(),
+      message: 'Deck created successfully. Upload images to populate the deck.'
+    })
   } catch (err) {
     logger.error('Error creating deck', err)
     res.status(500).json({ error: 'Failed to create deck' })
