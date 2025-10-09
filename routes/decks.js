@@ -540,6 +540,86 @@ async function deleteDeckHandler(req, res) {
 // protected route using passport
 router.delete('/:id', passport.authenticate('jwt', { session: false }), deleteDeckHandler)
 
+// PATCH /api/decks/:id/image - Update deck cover image URL (after client-side blob upload)
+router.patch('/:id/image', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  try {
+    const { id } = req.params
+    const { imageUrl } = req.body
+    
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'Image URL is required' })
+    }
+    
+    const deck = await Deck.findById(id)
+    if (!deck) return res.status(404).json({ error: 'Deck not found' })
+
+    // Check if this is the Rider-Waite deck - prevent editing
+    if (deck.deckName === 'Rider-Waite Tarot Deck') {
+      return res.status(403).json({ error: 'Rider-Waite Tarot deck cannot be edited' })
+    }
+
+    // Verify ownership
+    const ownerId = deck.owner?.toString()
+    const userId = req.user?._id?.toString() || req.user?.id?.toString()
+    if (!ownerId || !userId || ownerId !== userId) {
+      return res.status(403).json({ error: 'Not authorized to edit this deck' })
+    }
+
+    deck.image = imageUrl
+    await deck.save()
+
+    logger.info('Deck image URL updated:', { deckId: id, imageUrl })
+    res.json({ success: true, deck })
+  } catch (err) {
+    logger.error('Error updating deck image URL', err)
+    res.status(500).json({ error: 'Failed to update deck image' })
+  }
+})
+
+// PATCH /api/decks/:id/card/:cardName/image - Update card image URL (after client-side blob upload)
+router.patch('/:id/card/:cardName/image', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  try {
+    const { id, cardName } = req.params
+    const { imageUrl } = req.body
+    
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'Image URL is required' })
+    }
+    
+    const deck = await Deck.findById(id)
+    if (!deck) return res.status(404).json({ error: 'Deck not found' })
+
+    // Check if this is the Rider-Waite deck - prevent editing
+    if (deck.deckName === 'Rider-Waite Tarot Deck') {
+      return res.status(403).json({ error: 'Rider-Waite Tarot cards cannot be edited' })
+    }
+
+    // Verify ownership
+    const ownerId = deck.owner?.toString()
+    const userId = req.user?._id?.toString() || req.user?.id?.toString()
+    if (!ownerId || !userId || ownerId !== userId) {
+      return res.status(403).json({ error: 'Not authorized to edit this deck' })
+    }
+
+    // Find and update card
+    const card = deck.cards.find(c => (c.name || '').toLowerCase() === (cardName || '').toLowerCase())
+    if (card) {
+      card.image = imageUrl
+    } else {
+      // If card doesn't exist, create it
+      deck.cards.push({ name: cardName, image: imageUrl })
+    }
+
+    await deck.save()
+
+    logger.info('Card image URL updated:', { deckId: id, cardName, imageUrl })
+    res.json({ success: true, card: card || deck.cards[deck.cards.length - 1] })
+  } catch (err) {
+    logger.error('Error updating card image URL', err)
+    res.status(500).json({ error: 'Failed to update card image' })
+  }
+})
+
 // also expose handler for unit tests
 module.exports = router
 // attach handler for tests
