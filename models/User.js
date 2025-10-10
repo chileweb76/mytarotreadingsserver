@@ -125,6 +125,27 @@ const userSchema = new mongoose.Schema({
   deletionFinalNotified: {
     type: Boolean,
     default: false
+  },
+  // Push notification preferences
+  notificationEnabled: {
+    type: Boolean,
+    default: true
+  },
+  // Stored as 'HH:MM' string in user's local timezone
+  notificationTime: {
+    type: String,
+    default: '10:00'
+  },
+  // IANA timezone string (e.g., 'America/Los_Angeles')
+  notificationTimezone: {
+    type: String,
+    default: null
+  },
+  // Optional link to subscription id stored in pushSubscriptions collection
+  pushSubscriptionId: {
+    type: String,
+    default: null,
+    sparse: true
   }
 }, {
   timestamps: true // Adds createdAt and updatedAt automatically
