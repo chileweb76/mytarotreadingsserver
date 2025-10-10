@@ -63,12 +63,15 @@ router.post('/pdf', async (req, res) => {
         }
       }
 
+      // Ensure we send a Node Buffer (avoid ArrayBuffer being serialized to JSON)
+      const outBuf = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer)
+      try { console.log('[export-pdf] Sending PDF (fileName=%s, bytes=%d, contentType=%s)', fileName, outBuf.length, 'application/pdf') } catch (e) {}
       res.set({
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${fileName}"`,
-        'Content-Length': pdfBuffer.length
+        'Content-Length': outBuf.length
       })
-      return res.send(pdfBuffer)
+      return res.send(outBuf)
     }
 
   const readData = reading || req.body.reading
@@ -186,20 +189,23 @@ router.post('/pdf', async (req, res) => {
       try {
         pdfBuffer = await renderPdfFromHtml(renderedHtml)
       } catch (secondErr) {
-        console.error('[export-pdf] PDF render failed after retry (template)', secondErr && secondErr.stack ? secondErr.stack : secondErr)
-        if (secondErr && secondErr.diagnostics) {
-          console.error('[export-pdf] Render diagnostics:', JSON.stringify(secondErr.diagnostics).slice(0, 4000))
+          console.error('[export-pdf] PDF render failed after retry (template)', secondErr && secondErr.stack ? secondErr.stack : secondErr)
+          if (secondErr && secondErr.diagnostics) {
+            console.error('[export-pdf] Render diagnostics:', JSON.stringify(secondErr.diagnostics).slice(0, 4000))
+          }
+          return res.status(500).json({ error: 'Failed to generate PDF', details: secondErr && secondErr.message ? secondErr.message : String(secondErr) })
         }
-        return res.status(500).json({ error: 'Failed to generate PDF', details: secondErr && secondErr.message ? secondErr.message : String(secondErr) })
       }
-    }
 
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${fileName}"`,
-      'Content-Length': pdfBuffer.length
-    })
-    return res.send(pdfBuffer)
+      // Ensure we send a Node Buffer (avoid ArrayBuffer being serialized to JSON)
+      const outBuf = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer)
+      try { console.log('[export-pdf] Sending PDF (fileName=%s, bytes=%d, contentType=%s)', fileName, outBuf.length, 'application/pdf') } catch (e) {}
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${fileName}"`,
+        'Content-Length': outBuf.length
+      })
+      return res.send(outBuf)
   } catch (err) {
     console.error('PDF export failed', err)
     return res.status(500).json({ error: 'Failed to generate PDF', details: err.message })
