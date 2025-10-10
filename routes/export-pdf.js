@@ -19,7 +19,24 @@ if (typeof fetch === 'undefined') {
 // Expected body: { reading: { by, date, querent, spread, deck, question, cards: [{title}], interpretation }, fileName }
 router.post('/pdf', async (req, res) => {
   try {
-    const { reading, fileName = 'reading.pdf', html } = req.body
+    const { reading, fileName = 'reading.pdf', html } = req.body || {}
+
+    // Diagnostic logging: if neither html nor reading present, log a preview of what we received
+    if ((!html || typeof html !== 'string' || html.length === 0) && (!reading || typeof reading !== 'object')) {
+      try {
+        const contentType = req.get('content-type') || 'unknown'
+        console.warn('[export-pdf] Missing reading/html in request. Content-Type:', contentType)
+        // Attempt to read a small preview of raw body if available
+        if (req.body && typeof req.body === 'object') {
+          console.warn('[export-pdf] Request body keys:', Object.keys(req.body))
+        } else {
+          console.warn('[export-pdf] Request body is not an object. Raw body preview unavailable in this environment.')
+        }
+      } catch (diagErr) {
+        console.warn('[export-pdf] Failed to produce diagnostic preview of request body', diagErr)
+      }
+      return res.status(400).json({ error: 'reading object required' })
+    }
 
     // If caller provided raw HTML, render it directly to PDF. This allows clients
     // (like the Insights page) to assemble a full HTML snapshot (including an
