@@ -142,10 +142,10 @@ const userSchema = new mongoose.Schema({
     default: null
   },
   // Optional link to subscription id stored in pushSubscriptions collection
-  pushSubscriptionId: {
-    type: String,
-    default: null,
-    sparse: true
+  // Support multiple subscription ids for multi-device users
+  pushSubscriptionIds: {
+    type: [String],
+    default: []
   }
 }, {
   timestamps: true // Adds createdAt and updatedAt automatically
