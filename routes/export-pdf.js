@@ -43,7 +43,26 @@ router.post('/pdf', async (req, res) => {
     // inlined chart image) and have the server return a PDF of exactly that HTML.
     if (html && typeof html === 'string') {
       console.log('[export-pdf] Rendering raw HTML payload to PDF (fileName=%s, htmlLength=%d)', fileName, html.length)
-      const pdfBuffer = await renderPdfFromHtml(html)
+      // Attempt render with a single retry for transient failures
+      let pdfBuffer
+      try {
+        pdfBuffer = await renderPdfFromHtml(html)
+      } catch (firstErr) {
+        console.warn('[export-pdf] First render attempt failed, retrying once', firstErr && firstErr.message ? firstErr.message : firstErr)
+        // small backoff
+        await new Promise(r => setTimeout(r, 1000))
+        try {
+          pdfBuffer = await renderPdfFromHtml(html)
+        } catch (secondErr) {
+          console.error('[export-pdf] PDF render failed after retry', secondErr && secondErr.stack ? secondErr.stack : secondErr)
+          // If diagnostics were attached, log them for debugging
+          if (secondErr && secondErr.diagnostics) {
+            console.error('[export-pdf] Render diagnostics:', JSON.stringify(secondErr.diagnostics).slice(0, 4000))
+          }
+          return res.status(500).json({ error: 'Failed to generate PDF', details: secondErr && secondErr.message ? secondErr.message : String(secondErr) })
+        }
+      }
+
       res.set({
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${fileName}"`,
@@ -157,7 +176,23 @@ router.post('/pdf', async (req, res) => {
   const renderedHtml = tpl(data)
 
     // Render PDF using reusable worker
-  const pdfBuffer = await renderPdfFromHtml(renderedHtml)
+    // Render with one retry on transient failure
+    let pdfBuffer
+    try {
+      pdfBuffer = await renderPdfFromHtml(renderedHtml)
+    } catch (firstErr) {
+      console.warn('[export-pdf] First render attempt failed for template-rendered HTML, retrying once', firstErr && firstErr.message ? firstErr.message : firstErr)
+      await new Promise(r => setTimeout(r, 1000))
+      try {
+        pdfBuffer = await renderPdfFromHtml(renderedHtml)
+      } catch (secondErr) {
+        console.error('[export-pdf] PDF render failed after retry (template)', secondErr && secondErr.stack ? secondErr.stack : secondErr)
+        if (secondErr && secondErr.diagnostics) {
+          console.error('[export-pdf] Render diagnostics:', JSON.stringify(secondErr.diagnostics).slice(0, 4000))
+        }
+        return res.status(500).json({ error: 'Failed to generate PDF', details: secondErr && secondErr.message ? secondErr.message : String(secondErr) })
+      }
+    }
 
     res.set({
       'Content-Type': 'application/pdf',
