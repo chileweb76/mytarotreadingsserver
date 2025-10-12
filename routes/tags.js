@@ -6,7 +6,19 @@ const mongoose = require('mongoose')
 const logger = require('../lib/logger')
 
 // GET /api/tags - Get all tags (global + user's custom tags)
-router.get('/', async (req, res) => {
+router.get('/', (req, res, next) => {
+  // Attempt optional authentication to populate req.user when a token is present.
+  // We don't want to require auth for this endpoint; we only want to use it if available.
+  try {
+    const passport = require('passport')
+    passport.authenticate('jwt', { session: false })(req, res, () => {
+      return next()
+    })
+  } catch (e) {
+    // If passport isn't configured, just continue without user
+    return next()
+  }
+}, async (req, res) => {
   try {
     const userId = req.user?.id || req.headers['x-user-id']
 
@@ -31,6 +43,9 @@ router.get('/', async (req, res) => {
     const query = parsedUserId
       ? { $or: [ { isGlobal: true, userId: null }, { userId: parsedUserId } ] }
       : { isGlobal: true, userId: null }
+
+    // Debug log to confirm whether req.user was seen
+    try { console.log('Frontend Tags: req.user present?', !!req.user, 'userIdHeader:', req.headers['x-user-id'], 'parsedUserId:', parsedUserId) } catch (e) {}
 
     const tags = await Tag.find(query).sort({ isGlobal: -1, nameLower: 1 }) // Global first, then alphabetical
 

@@ -57,7 +57,17 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
 })
 
 // Get all spreads
-router.get('/', async (req, res) => {
+router.get('/', (req, res, next) => {
+  // Attempt optional authentication so req.user is set if a valid token is present
+  try {
+    const passport = require('passport')
+    passport.authenticate('jwt', { session: false })(req, res, () => {
+      return next()
+    })
+  } catch (e) {
+    return next()
+  }
+}, async (req, res) => {
   try {
     // Determine requesting user (support passport req.user or x-user-id header)
     const userId = req.user?.id || req.user?._id || req.headers['x-user-id'] || null
@@ -79,11 +89,13 @@ router.get('/', async (req, res) => {
       parsedUserId = userId
     }
 
-    // Build query: always include global spreads (owner: null), and include user's spreads when available
-    const query = parsedUserId ? { $or: [ { owner: null }, { owner: parsedUserId } ] } : { owner: null }
+  // Build query: always include global spreads (owner: null), and include user's spreads when available
+  const query = parsedUserId ? { $or: [ { owner: null }, { owner: parsedUserId } ] } : { owner: null }
 
-    const spreads = await Spread.find(query).sort({ spread: 1 })
-    res.json(spreads)
+  try { console.log('Frontend Spreads: req.user present?', !!req.user, 'userIdHeader:', req.headers['x-user-id'], 'parsedUserId:', parsedUserId) } catch (e) {}
+
+  const spreads = await Spread.find(query).sort({ spread: 1 })
+  res.json(spreads)
   } catch (err) {
     logger.error('Error fetching spreads', err)
     res.status(500).json({ error: 'Failed to fetch spreads' })
