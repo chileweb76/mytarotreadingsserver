@@ -59,7 +59,30 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
 // Get all spreads
 router.get('/', async (req, res) => {
   try {
-    const spreads = await Spread.find({}).sort({ spread: 1 })
+    // Determine requesting user (support passport req.user or x-user-id header)
+    const userId = req.user?.id || req.user?._id || req.headers['x-user-id'] || null
+
+    // Attempt to parse userId into ObjectId when possible
+    let parsedUserId = null
+    try {
+      const mongoose = require('mongoose')
+      if (userId && mongoose && mongoose.Types && typeof mongoose.Types.ObjectId === 'function' && mongoose.Types.ObjectId.isValid(userId)) {
+        try {
+          parsedUserId = new mongoose.Types.ObjectId(userId)
+        } catch (e) {
+          parsedUserId = userId
+        }
+      } else {
+        parsedUserId = userId
+      }
+    } catch (e) {
+      parsedUserId = userId
+    }
+
+    // Build query: always include global spreads (owner: null), and include user's spreads when available
+    const query = parsedUserId ? { $or: [ { owner: null }, { owner: parsedUserId } ] } : { owner: null }
+
+    const spreads = await Spread.find(query).sort({ spread: 1 })
     res.json(spreads)
   } catch (err) {
     logger.error('Error fetching spreads', err)
