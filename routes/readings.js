@@ -612,6 +612,46 @@ router.post('/', authenticateUser, async (req, res) => {
       }
     }
 
+    // Normalize drawnCards to ensure required fields are present. Clients may send
+    // varying shapes (strings, objects missing 'title', etc.). Coerce to a
+    // consistent array of objects to avoid Mongoose validation failures.
+    let normalizedDrawnCards = []
+    try {
+      if (Array.isArray(drawnCards)) {
+        normalizedDrawnCards = drawnCards.map(c => {
+          // allow string shorthand where card is provided as a string
+          if (typeof c === 'string') {
+            return { title: c || 'Unknown Card', suit: '', card: c || 'Unknown Card', reversed: false, interpretation: '', image: null }
+          }
+          // object - pick common fields with sensible fallbacks
+          return {
+            title: (c && (c.title || c.name || c.card || c.cardName)) ? (c.title || c.name || c.card || c.cardName) : 'Unknown Card',
+            suit: c && (c.suit || '') || '',
+            card: (c && (c.card || c.cardName || c.name)) ? (c.card || c.cardName || c.name) : (c && c.title ? c.title : 'Unknown Card'),
+            reversed: !!(c && c.reversed),
+            interpretation: c && (c.interpretation || '') || '',
+            image: c && (c.image || null) || null
+          }
+        })
+      } else if (drawnCards) {
+        const c = drawnCards
+        if (typeof c === 'string') {
+          normalizedDrawnCards = [{ title: c || 'Unknown Card', suit: '', card: c || 'Unknown Card', reversed: false, interpretation: '', image: null }]
+        } else if (typeof c === 'object') {
+          normalizedDrawnCards = [{
+            title: (c.title || c.name || c.card || c.cardName) || 'Unknown Card',
+            suit: (c.suit || '') || '',
+            card: (c.card || c.cardName || c.name) || (c.title || 'Unknown Card'),
+            reversed: !!c.reversed,
+            interpretation: c.interpretation || '',
+            image: c.image || null
+          }]
+        }
+      }
+    } catch (e) {
+      normalizedDrawnCards = []
+    }
+
     // Create new reading
     const reading = new Reading({
       querent: querentToSave,
@@ -620,10 +660,11 @@ router.post('/', authenticateUser, async (req, res) => {
       question: question || '',
       deck: deck || null,
       dateTime: parseClientDate(dateTime),
-      drawnCards: Array.isArray(drawnCards) ? drawnCards : (drawnCards ? [drawnCards] : []),
+      drawnCards: normalizedDrawnCards,
       interpretation: interpretation || '',
       selectedTags: processedTags,
-      userId: effectiveUserId || null
+      userId: effectiveUserId || null,
+      by: req.user ? (req.user.username || req.user.name || req.user.email || 'Unknown') : 'Unknown'
     })
 
     console.log('🔵 [readings POST] Creating reading with selectedTags:', reading.selectedTags)

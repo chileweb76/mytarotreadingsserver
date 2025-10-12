@@ -4,7 +4,7 @@ const mongoose = require('mongoose')
 const spreadSchema = new mongoose.Schema({
   spread: { type: String, required: true },
   cards: { type: [String], default: [] },
-  image: { type: String, default: '/images/spreads/custom.png' },
+  image: { type: String, default: 'https://emfobsnlxploca6s.public.blob.vercel-storage.com/spreads/custom.png' },
   numberofCards: { type: Number },
   meanings: { type: [String], default: [] },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },

@@ -42,7 +42,7 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
     const doc = new Spread({
       spread,
       cards: Array.isArray(cards) ? cards : [],
-  image: image && String(image).trim() ? image : '/images/spreads/custom.png',
+  image: image && String(image).trim() ? image : 'https://emfobsnlxploca6s.public.blob.vercel-storage.com/spreads/custom.png',
       numberofCards: numberofCards || (Array.isArray(cards) ? cards.length : undefined),
       meanings: Array.isArray(meanings) ? meanings : [],
       owner: owner,

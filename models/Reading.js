@@ -1,7 +1,7 @@
 const mongoose = require('mongoose')
 
 const drawnCardSchema = new mongoose.Schema({
-  title: { type: String, required: true },
+  title: { type: String, required: true, default: 'Unknown Card' },
   suit: { type: String, required: false },
   card: { type: String, required: true }, 
   reversed: { type: Boolean, default: false },
@@ -41,6 +41,7 @@ const readingSchema = new mongoose.Schema({
     ref: 'User',
     required: false 
   },
+  by: { type: String, required: false }, // Human-readable 'Reading by' field (username or display name)
   createdAt: { type: Date, default: Date.now }
 })
 

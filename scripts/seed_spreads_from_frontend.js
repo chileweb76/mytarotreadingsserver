@@ -54,10 +54,12 @@ async function main() {
   const del = await Spread.deleteMany({ owner: null })
   console.log(`Deleted ${del.deletedCount} default spreads`) 
 
+  const DEFAULT_CUSTOM_SPREAD_IMAGE = 'https://emfobsnlxploca6s.public.blob.vercel-storage.com/spreads/custom.png'
+
   const docs = spreadsData.map(s => ({
     spread: s.spread,
     cards: s.cards || [],
-    image: s.image || '/images/spreads/custom.png',
+    image: s.image || DEFAULT_CUSTOM_SPREAD_IMAGE,
     numberofCards: s.numberofCards || (s.cards ? s.cards.length : 0),
     owner: null,
     isCustom: false,
