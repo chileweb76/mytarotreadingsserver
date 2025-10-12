@@ -1,10 +1,11 @@
 const express = require('express')
 const router = express.Router()
+const passport = require('passport')
 const Reading = require('../models/Reading')
 const mongoose = require('mongoose')
 
 // GET /api/insights/count?querent=<id|self>&start=YYYY-MM-DD&end=YYYY-MM-DD&deck=<deckId|all>
-router.get('/count', async (req, res) => {
+router.get('/count', passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
     const { querent, start, end, deck, tags } = req.query
     const filters = {}
@@ -29,6 +30,12 @@ router.get('/count', async (req, res) => {
       const e = parseDayEnd(end)
       if (s) filters.dateTime.$gte = s
       if (e) filters.dateTime.$lte = e
+    }
+
+    // scope to authenticated user's readings only
+    if (req.user) {
+      const uid = req.user.id || req.user._id
+      if (uid) filters.userId = new mongoose.Types.ObjectId(String(uid))
     }
 
     // deck filter
@@ -77,7 +84,7 @@ router.get('/count', async (req, res) => {
 })
 
     // GET /api/insights/suits?querent=<id|self>&start=YYYY-MM-DD&end=YYYY-MM-DD&deck=<deckId|all>&tags=<ids>
-    router.get('/suits', async (req, res) => {
+  router.get('/suits', passport.authenticate('jwt', { session: false }), async (req, res) => {
       try {
         const { querent, start, end, deck, tags } = req.query
         const match = {}
@@ -136,7 +143,7 @@ router.get('/count', async (req, res) => {
           { $project: { suit: '$_id', count: 1, _id: 0 } }
         ]
 
-        const results = await Reading.aggregate(pipeline)
+  const results = await Reading.aggregate(pipeline)
         // normalize to object map
         const suits = {}
         results.forEach(r => {
@@ -151,7 +158,7 @@ router.get('/count', async (req, res) => {
     })
 
     // GET /api/insights/cards?querent=<id|self>&start=YYYY-MM-DD&end=YYYY-MM-DD&deck=<deckId|all>&tags=<ids>
-    router.get('/cards', async (req, res) => {
+  router.get('/cards', passport.authenticate('jwt', { session: false }), async (req, res) => {
       try {
         const { querent, start, end, deck, tags } = req.query
         const match = {}
@@ -217,13 +224,76 @@ router.get('/count', async (req, res) => {
           { $sort: { count: -1, card: 1 } }
         ]
 
-        const results = await Reading.aggregate(pipeline)
+  const results = await Reading.aggregate(pipeline)
   const cards = results.map(r => ({ card: r.card || 'Unknown', count: r.count || 0, suit: r.suit || null }))
 
         res.json({ cards })
       } catch (e) {
         console.error('Insights cards error', e)
         res.status(500).json({ error: 'Failed to compute card frequencies' })
+      }
+    })
+
+    // GET /api/insights/tags?querent=<id|self>&start=YYYY-MM-DD&end=YYYY-MM-DD&deck=<deckId|all>
+    router.get('/tags', passport.authenticate('jwt', { session: false }), async (req, res) => {
+      try {
+        const { querent, start, end, deck } = req.query
+        const match = {}
+
+        const parseDayStart = (s) => {
+          if (!s) return null
+          return s.includes('T') ? new Date(s) : new Date(`${s}T00:00:00.000Z`)
+        }
+        const parseDayEnd = (s) => {
+          if (!s) return null
+          return s.includes('T') ? new Date(s) : new Date(`${s}T23:59:59.999Z`)
+        }
+
+        if (start || end) {
+          match.dateTime = {}
+          const s = parseDayStart(start)
+          const e = parseDayEnd(end)
+          if (s) match.dateTime.$gte = s
+          if (e) match.dateTime.$lte = e
+        }
+
+        if (deck && deck !== 'all') {
+          if (mongoose.Types.ObjectId.isValid(String(deck))) match.deck = new mongoose.Types.ObjectId(String(deck))
+        }
+
+        if (typeof querent !== 'undefined' && querent !== null && querent !== '') {
+          const q = String(querent)
+          if (q === 'self') {
+            const Querent = require('../models/Querent')
+            const selfQ = await Querent.findOne({ name: 'Self', userId: null }).lean()
+            if (selfQ && selfQ._id) match.querent = selfQ._id
+            else match.querent = null
+          } else if (mongoose.Types.ObjectId.isValid(q)) {
+            match.querent = new mongoose.Types.ObjectId(q)
+          }
+        }
+
+        // scope to authenticated user's readings only
+        if (req.user) {
+          const uid = req.user.id || req.user._id
+          if (uid) match.userId = new mongoose.Types.ObjectId(String(uid))
+        }
+
+        // aggregation: unwind selectedTags and group by tag id
+        const pipeline = [
+          { $match: match },
+          { $unwind: '$selectedTags' },
+          { $group: { _id: '$selectedTags', count: { $sum: 1 } } },
+          { $project: { tagId: '$_id', count: 1, _id: 0 } },
+          { $sort: { count: -1 } }
+        ]
+
+        const results = await Reading.aggregate(pipeline)
+        const tags = results.map(r => ({ tagId: r.tagId, count: r.count }))
+        res.json({ tags })
+      } catch (e) {
+        console.error('Insights tags error', e)
+        res.status(500).json({ error: 'Failed to compute tag frequencies' })
       }
     })
 
