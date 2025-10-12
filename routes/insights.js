@@ -135,6 +135,12 @@ router.get('/count', passport.authenticate('jwt', { session: false }), async (re
           }
         }
 
+        // scope to authenticated user's readings only
+        if (req.user) {
+          const uid = req.user.id || req.user._id
+          if (uid) match.userId = new mongoose.Types.ObjectId(String(uid))
+        }
+
         // aggregation: unwind drawnCards.suit and group
         const pipeline = [
           { $match: match },
@@ -207,6 +213,12 @@ router.get('/count', passport.authenticate('jwt', { session: false }), async (re
           } else if (mongoose.Types.ObjectId.isValid(q)) {
             match.querent = new mongoose.Types.ObjectId(q)
           }
+        }
+
+        // scope to authenticated user's readings only
+        if (req.user) {
+          const uid = req.user.id || req.user._id
+          if (uid) match.userId = new mongoose.Types.ObjectId(String(uid))
         }
 
         // aggregation: unwind drawnCards and group by card name
